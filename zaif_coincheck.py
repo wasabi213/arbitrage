@@ -18,6 +18,7 @@ from common import log
 CONFIG_FILE = '../config/zaif_coincheck_config.ini'
 MODE = "test"
 
+
 ####初期設定値####
 #api設定
 
