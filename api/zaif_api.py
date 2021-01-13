@@ -1,3 +1,4 @@
+import logger
 import datetime
 import hashlib
 import hmac
@@ -12,7 +13,7 @@ import codecs
 from zaifapi import ZaifPublicApi,ZaifTradeApi
 
 CONFIG_FILE = '../config/zaif_coincheck_config.ini'
-
+log = logger.Logger(__name__)
 
 class ZaifApi:
 
@@ -46,6 +47,14 @@ class ZaifApi:
         action = 'bid', #zaifでは「bid」が「買い」になる
         amount = btc,
         price = int((zaif_ask + 10000) / 10) * 10)
+
+    ################################
+    #残高情報を取得する。
+    ################################
+    def zaif_get_info2(self):
+        zaif = ZaifTradeApi(self.API_KEY,self.API_SECRET_KEY)
+        balance_info = zaif.get_info2()
+        return balance_info
 
     ########################
     #zaifの板情報を取得する。
@@ -94,3 +103,82 @@ class ZaifApi:
     def zaif_get_board_bid_lot(self,result):
         bids = result.get("bids")
         return bids[0][1]
+
+
+    #######################################################################
+    #板から指定された価格帯の枚数の合計を取得する。
+    # ex.3を指定した場合、上から、または下から３枚の板の指値の合計枚数を返却する。
+    #######################################################################
+    def zaif_get_board_ask_lot_sum(self,result,board_num):
+        lot = 0
+        asks = result.get("asks")
+
+        for i in range(board_num):
+            lot = lot + float(asks[i][1])
+
+        return lot
+
+    def zaif_get_board_bid_lot_sum(self,result,board_num):
+        lot = 0
+        bids = result.get("bids")
+
+        for i in range(board_num):
+            lot = lot + float(bids[i][1])
+
+        return lot
+
+    #指定した板のロットを取得する。
+    #指定した板がboard_numberより小さい場合は、board_numberのプライスを返却する。
+    #指定した板までの合計枚数が、rate倍となるような板の価格を取得する。
+    def zaif_get_ticker_by_size(self,board,entry_lot_size,board_number,rate):
+
+        ask_lot_sum = 0 
+        bid_lot_sum = 0
+        ask = 0
+        bid = 0
+
+        if board_number < 1:
+            log.error('板の価格設定が異常のため、終了します。')
+
+        board_number = board_number - 1
+
+        for i in range(len(board['asks'])):
+            ask_lot_sum += float(board['asks'][i][1])
+
+            if ask_lot_sum >= entry_lot_size * rate:
+                if i < board_number:
+                    i = board_number
+
+                ask = board['asks'][i][0]
+
+                log.info('zaif ask 板枚数:' + str(i))
+                break
+
+        for j in range(len(board['bids'])):
+            bid_lot_sum += float(board['bids'][j][1])
+
+            if bid_lot_sum >= entry_lot_size * rate:
+                if j < board_number:
+                    j = board_number
+
+                bid = board['bids'][j][0]
+
+                log.info('zaif bid 板枚数:' + str(j))
+                break
+
+        if i >= len(board['bids']) or j >= len(board['asks']):
+            log.error("Error : 有効価格が取得できた板の範囲外にあります。")
+
+        return {'bid': [bid,bid_lot_sum],'ask': [ask,ask_lot_sum]}
+
+    ##########################
+    #残高からjpyを取得する
+    ##########################
+    def zaif_get_balance_jpy(self,result):
+        return ['return']['funds']['jpy']
+
+    ##########################
+    #残高からbtcを取得する
+    ##########################
+    def zaif_get_balance_btc(self,result):
+        return ['return']['funds']['btc']
