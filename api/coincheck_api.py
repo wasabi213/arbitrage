@@ -19,7 +19,7 @@ class CoincheckApi:
     def __init__(self):
 
         self.conf = configparser.ConfigParser()
-        self.conf.readfp(codecs.open(CONFIG_FILE,"r","utf8"))
+        self.conf.read_file(codecs.open(CONFIG_FILE,"r","utf8"))
 
         #APIキーの取得
         self.MODE = self.conf.get('env','mode')
@@ -37,7 +37,7 @@ class CoincheckApi:
                     'ACCESS-NONCE':str(i_nonce), 
                     'Content-Type': 'application/json'}
 
-        s = hmac.new(bytearray(coin_secret_key.encode('utf-8')), digestmod=hashlib.sha256)
+        s = hmac.new(bytearray(self.API_SECRET_KEY.encode('utf-8')), digestmod=hashlib.sha256)
 
         if i_params is None:
             w = str(i_nonce) + API_URL + i_path
@@ -62,14 +62,17 @@ class CoincheckApi:
     def coin_get_balance(self):
         #order_type : market_sell : 成行注文　現物取引　売り
         nonce = int((datetime.datetime.today() - datetime.datetime(2017,1,1)).total_seconds()) * 100
-        c = ccPrivateApi("/api/accounts/balance",nonce)
+
+ 
+
+        c = self.ccPrivateApi("/api/accounts/balance",nonce)
         r = c.json()
 
         if r['success'] != True:
             error_message = r['error']
             msg = str(datetime.datetime.now()) + ',ccerror,'+ str(error_message) + '\n'
             log.error(msg)
-            log_output(trade_log_path,msg)
+            #log_output(trade_log_path,msg)
         return r
 
     ###############################################
@@ -79,16 +82,13 @@ class CoincheckApi:
         url = 'https://coincheck.jp/api/ticker'
         return requests.get(url).text
 
-
-
-
     ###################################
     #coincheckでbtc分のBitcoinを売る関数
     ###################################
     def trade_coin_bid(self,btc):
         #order_type : market_sell : 成行注文　現物取引　売り
         nonce = int((datetime.datetime.today() - datetime.datetime(2017,1,1)).total_seconds()) * 100
-        c = ccPrivateApi("/api/exchange/orders",nonce,
+        c = self.ccPrivateApi("/api/exchange/orders",nonce,
                             {"pair":"btc_jpy",
                             "order_type":"market_sell",
                             "amount":btc})
@@ -111,7 +111,7 @@ class CoincheckApi:
         #買いの成行注文をする場合は、market_buy_amountを指定する必要がある。(JPY)
         #market_buy_amountは日本円で渡す必要があるため、 int(btc * coin_ask)としている。
         nonce = int((datetime.datetime.today() - datetime.datetime(2017,1,1)).total_seconds()) * 100
-        c = ccPrivateApi("/api/exchange/orders",nonce,
+        c = self.ccPrivateApi("/api/exchange/orders",nonce,
                             {"pair":"btc_jpy",
                             "order_type":"market_buy",
                             "market_buy_amount":int(btc*coin_ask)})
@@ -129,7 +129,7 @@ class CoincheckApi:
     ##############################
     def trade_coin_ask_limit_price(self,btc,coin_ask):
         nonce = int((datetime.datetime.today() - datetime.datetime(2017,1,1)).total_seconds()) * 100
-        c = ccPrivateApi("/api/exchange/orders",nonce,
+        c = self.ccPrivateApi("/api/exchange/orders",nonce,
                             {"pair":"btc_jpy",
                             "order_type":"buy",
                             "rate":int(coin_ask*1.1),

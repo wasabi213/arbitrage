@@ -34,7 +34,7 @@ class Logger:
 
 		# file
 		if inifile.getboolean('system','logging') == True:
-			handler = logging.handlers.TimedRotatingFileHandler(filename=self.system_log_path,when='midnight',backupCount=10)
+			handler = logging.handlers.TimedRotatingFileHandler(filename=self.system_log_path,when='H',backupCount=10)
 			handler.setLevel(self.system_log_level)
 			file_formatter = Formatter("[%(asctime)s] [%(process)d] [%(name)s] [%(levelname)s] %(message)s")
 			handler.setFormatter(file_formatter)

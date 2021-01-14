@@ -42,9 +42,11 @@ class ZaifCoincheckTrade:
 
     def __init__(self):
         self.conf = configparser.ConfigParser() 
-        self.conf.readfp(codecs.open(CONFIG_FILE,"r","utf8"))
+        #self.conf.readfp(codecs.open(CONFIG_FILE,"r","utf8"))
+        self.conf.read_file(codecs.open(CONFIG_FILE,"r","utf8"))
+
         self.LOG_PATH = self.conf.get('path','trade_log_path') 
-        self.cc_api = coincheck_api.CoincheckApi()
+        self.coin_api = coincheck_api.CoincheckApi()
         self.zaif_api = zaif_api.ZaifApi()
         self.TRADE_FLAG = -1
 
@@ -106,6 +108,8 @@ class ZaifCoincheckTrade:
                 self.open_spread = lastrow[15]
                 self.close_spread = lastrow[16]
 
+        log.critical(lastrow)
+
         return(self.TRADE_FLAG)
 
     #スタート時のパラメータ表示
@@ -140,7 +144,7 @@ class ZaifCoincheckTrade:
         #coincheck_ticker取得
         for i in range(retry_count_Th):
             try:
-                coin_data_dict = json.loads(self.cc_api.coin_get_ticker())
+                coin_data_dict = json.loads(self.coin_api.coin_get_ticker())
             except:
                 log.info('coin_Error:ticker_待機します。 '+str(i)+'回目')
                 time.sleep(retry_freq)
@@ -182,13 +186,13 @@ class ZaifCoincheckTrade:
         zaif_balance_btc = self.zaif_api.zaif_get_balance_btc(zaif_balance_info)
 
         coin_balance_info = self.coin_api.coin_get_balance()
-        coin_balance_jpy = self.coin_api.coin_get_balance_jpy(zaif_balance_info)
-        coin_balance_btc = self.coin_api.coin_get_balance_btc(zaif_balance_info)
+        coin_balance_jpy = self.coin_api.coin_get_balance_jpy(coin_balance_info)
+        coin_balance_btc = self.coin_api.coin_get_balance_btc(coin_balance_info)
 
-        balance = { zaif_jpy:zaif_balance_jpy,
-                    zaif_btc:zaif_balance_btc,
-                    coin_jpy:coin_balance_jpy,
-                    coin_btc:coin_balance_btc
+        balance = { 'zaif_jpy':zaif_balance_jpy,
+                    'zaif_btc':zaif_balance_btc,
+                    'coin_jpy':coin_balance_jpy,
+                    'coin_btc':coin_balance_btc
                     }
         return balance
 
@@ -210,24 +214,29 @@ class ZaifCoincheckTrade:
             #ブローカーからプライスが取得できることを確認する。
             self.getBrokerTicker()
 
+
+            #debug
+            self.get_balance()
+
+
             #板情報を取得する。
-            coincheck_result = self.cc_api.coincheck_get_board()
+            coincheck_result = self.coin_api.coincheck_get_board()
             zaif_result = self.zaif_api.zaif_get_board()
 
             #lotを取得する。
-            coin_bid_lot = float(self.cc_api.coincheck_get_board_bid_lot(coincheck_result))
-            coin_ask_lot = float(self.cc_api.coincheck_get_board_ask_lot(coincheck_result))
+            coin_bid_lot = float(self.coin_api.coincheck_get_board_bid_lot(coincheck_result))
+            coin_ask_lot = float(self.coin_api.coincheck_get_board_ask_lot(coincheck_result))
             zaif_bid_lot = float(self.zaif_api.zaif_get_board_bid_lot(zaif_result))
             zaif_ask_lot = float(self.zaif_api.zaif_get_board_ask_lot(zaif_result))
 
-            coin_bid_lot_sum = float(self.cc_api.coincheck_get_board_bid_lot_sum(coincheck_result,3))
-            coin_ask_lot_sum = float(self.cc_api.coincheck_get_board_ask_lot_sum(coincheck_result,3))
+            coin_bid_lot_sum = float(self.coin_api.coincheck_get_board_bid_lot_sum(coincheck_result,3))
+            coin_ask_lot_sum = float(self.coin_api.coincheck_get_board_ask_lot_sum(coincheck_result,3))
             zaif_bid_lot_sum = float(self.zaif_api.zaif_get_board_bid_lot_sum(zaif_result,3))
             zaif_ask_lot_sum = float(self.zaif_api.zaif_get_board_ask_lot_sum(zaif_result,3))
 
             board_number = 3
             zaif_real_price = self.zaif_api.zaif_get_ticker_by_size(zaif_result,btc,board_number,entry_rate)
-            coin_real_price = self.cc_api.coin_get_ticker_by_size(coincheck_result,btc,board_number,entry_rate)
+            coin_real_price = self.coin_api.coin_get_ticker_by_size(coincheck_result,btc,board_number,entry_rate)
 
             zaif_ask = float(zaif_real_price['ask'][0])
             zaif_bid = float(zaif_real_price['bid'][0])
@@ -257,24 +266,24 @@ class ZaifCoincheckTrade:
 
                 if Trade_Type == 'za_cb':
                     if za_cb > spread_Th:
-                        log.info("********************** Spread OK! ************************")
+                        log.info("********************** Spread OK!")
                         spread_count = spread_count + 1
 
                         #spreadが2回連続でしきい値を超えたら、フラグを設定する。
                         if spread_count >= spread_count_Th:
-                            log.info("Lot OK!")
+                            log.info("******************************************** Lot OK!")
                             self.TRADE_FLAG = 1
                             spread_count = 0
                     else:
                         spread_count = 0
                 else:
                     if ca_zb > spread_Th:
-                        log.info("********************** Spread OK! ************************")
+                        log.info("********************** Spread OK!")
                         spread_count = spread_count + 1
 
                         #spreadが2回連続でしきい値を超えたら、フラグを設定する。
                         if spread_count >= spread_count_Th:
-                            log.info("Lot OK!")
+                            log.info("******************************************** Lot OK!")
                             self.TRADE_FLAG = 2
                             spread_count = 0
                     else:
@@ -290,7 +299,7 @@ class ZaifCoincheckTrade:
                             #zaifで買う。
                             self.zaif_api.trade_zaif_ask(btc,zaif_ask)
                             #coincheckで売る。
-                            self.cc_api.trade_coin_bid(btc)
+                            self.coin_api.trade_coin_bid(btc)
 
                         else:
                             #zaifで買った価格と数量を出力する。
@@ -315,7 +324,7 @@ class ZaifCoincheckTrade:
                             #zaifで売る。
                             self.zaif_api.trade_zaif_bid(btc,zaif_bid)
                             #coincheckで買う。    
-                            self.cc_api.trade_coin_ask(btc,coin_ask)
+                            self.coin_api.trade_coin_ask(btc,coin_ask)
                         else:
                             #zaifで売った価格と数量を出力する。
                             self.zaif_yen_amount = self.zaif_yen_amount + (btc * zaif_bid)
@@ -346,7 +355,7 @@ class ZaifCoincheckTrade:
                     if ca_zb > unspread_Th:
                         unspread_count = unspread_count + 1
                         if unspread_count >= unspread_count_Th:
-                            log.info("********************** Unspread OK! ************************")
+                            log.info("********************** Unspread OK!")
                             self.TRADE_FLAG = 3
                             Trade_Type = 'ca_zb'
                             Trade_result = ca_zb
@@ -360,7 +369,7 @@ class ZaifCoincheckTrade:
                     if za_cb > unspread_Th:
                         unspread_count = unspread_count + 1
                         if unspread_count >= unspread_count_Th:
-                            log.info("********************** Unspread OK! ************************")
+                            log.info("********************** Unspread OK!")
                             self.TRADE_FLAG = 3
                             Trade_Type = 'za_cb'
                             Trade_result = za_cb
@@ -375,7 +384,7 @@ class ZaifCoincheckTrade:
                         #zaifで買って手仕舞いする。
                         self.zaif_api.trade_zaif_ask(btc,zaif_ask)
                         #coincheckで売って手仕舞いする。
-                        self.cc_api.trade_coin_bid(btc)
+                        self.coin_api.trade_coin_bid(btc)
                     else:
                         #zaifで買った価格と数量を出力する。
                         self.zaif_yen_amount = self.zaif_yen_amount - (btc * zaif_ask)
@@ -395,7 +404,7 @@ class ZaifCoincheckTrade:
                         #zaifで売って手仕舞いする。
                         self.zaif_api.trade_zaif_bid(btc,zaif_bid) 
                         #coincheckで買って手仕舞いする。
-                        self.cc_api.trade_coin_ask(btc,coin_ask)
+                        self.coin_api.trade_coin_ask(btc,coin_ask)
                     else:
                         #zaifで売った価格と数量を出力する。
                         self.zaif_yen_amount = self.zaif_yen_amount + (btc * zaif_bid)
@@ -426,7 +435,7 @@ class ZaifCoincheckTrade:
             log.info("spread price:" + str(self.open_spread)) 
             log.info("unspread price:" + str(self.close_spread)) 
 
-            if MODE == 'prodeuction':
+            if MODE == 'production':
                 balance = self.get_balance()
                 log.info("zaif yen-amount:" + "{:,.0f}".format(balance.zaif_jpy) + " " + "btc-amount:" + str(balance.zaif_btc))
                 log.info("coincheck yen-amount:" + "{:,.0f}".format(balance.coin_jpy) + " " + "btc-amount:" + str(balance.coin_btc))
@@ -446,6 +455,10 @@ class ZaifCoincheckTrade:
 
 
             time.sleep(freq)
+
+
+
+
 
 if __name__ == "__main__":
 

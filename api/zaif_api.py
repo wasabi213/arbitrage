@@ -20,13 +20,15 @@ class ZaifApi:
     def __init__(self):
 
         self.conf = configparser.ConfigParser() 
-        self.conf.readfp(codecs.open(CONFIG_FILE,"r","utf8"))
+        self.conf.read_file(codecs.open(CONFIG_FILE,"r","utf8"))
 
         #APIキーの取得
         self.MODE = self.conf.get("env","mode")
         self.API_KEY = self.conf.get("api_keys","zaif_access_key")
         self.API_SECRET_KEY = self.conf.get("api_keys","zaif_secret_key")
         self.LOG_PATH = self.conf.get("path","trade_log_path")  #ログパスの取得
+        #self.zaif = ZaifTradeApi(self.API_KEY,self.API_SECRET_KEY)
+        #self.zaif = ZaifTradeApi('bfce8f6f-8677-43e1-9418-4be514e2ce6c','522dbe21-6925-45b6-9306-f215a25945cb')
 
     ##################################
     #zaifでbtc分だけのBitcoinを売る関数
@@ -175,10 +177,10 @@ class ZaifApi:
     #残高からjpyを取得する
     ##########################
     def zaif_get_balance_jpy(self,result):
-        return ['return']['funds']['jpy']
+        return result['funds']['jpy']
 
     ##########################
     #残高からbtcを取得する
     ##########################
     def zaif_get_balance_btc(self,result):
-        return ['return']['funds']['btc']
+        return result['funds']['btc']
