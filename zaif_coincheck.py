@@ -80,6 +80,8 @@ class ZaifCoincheckTrade:
             self.TRADE_FLAG = 0
             log.critical('初回トレードです。')
             last_trade_status = 'unspread'
+            self.TRADE_FLAG = 0
+            return
 
         lastrow = lines[-1].split(',')
         last_trade_status = lastrow[1]
