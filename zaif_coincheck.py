@@ -1,5 +1,8 @@
 # coding:utf-8
 ####import設定####
+import os
+import pathlib
+import traceback
 import logger
 import datetime
 import hashlib
@@ -58,57 +61,61 @@ class ZaifCoincheckTrade:
         self.coincheck_yen_amount = 100000 #日本円初回残高
         self.coincheck_btc_amount = 0.1    #BTC初回残高
 
-    ##############
+        self.create_status_log()
+
+    #status_logを作成する。
+    def create_status_log(self):
+        #ディレクトリを取得する。
+        if os.path.exists(self.LOG_PATH) == False:
+            pathlib.Path(self.LOG_PATH).touch()
+
+
     #log入力用関数
-    ##############
     def logreader(self):
         f = open(self.LOG_PATH,'r')
+        lines = f.readlines()
+        f.close()
 
-        reader = csv.reader(f)
-        f.close
-
-        if reader.line_num == 0:
+        if len(lines) == 0:
             self.TRADE_FLAG = 0
-            return(self.TRADE_FLAG)
+            log.critical('初回トレードです。')
+            return
 
-        for row in reader:
+        lastrow = lines[-1].split(',')
+        last_trade_status = lastrow[1]
 
-            lastrow = row
+        if len(lastrow) >= 11:
+            last_trade_type = lastrow[11]
 
-            last_trade_status = lastrow[1]
+        if last_trade_status == 'unspread':
+            #spread待ち状態
+            self.TRADE_FLAG = 0
 
-            if len(lastrow) >= 11:
-                last_trade_type = lastrow[11]
+        elif last_trade_status == 'ccerror':
+            log.critical('CoinCheckでエラーが発生した履歴があります。プログラムスタートさせません。')
+            sys.exit()
 
-            if last_trade_status == 'unspread':
-                #spread待ち状態
-                self.TRADE_FLAG = 0
+        #unspreadをしないで閉じてしまっている。
+        elif last_trade_status == 'spread':
 
-            elif last_trade_status == 'ccerror':
-                log.critical('CoinCheckでエラーが発生した履歴があります。プログラムスタートさせません。')
+            if last_trade_type == 'za_cb':
+                #spread時にza_cbをやってしまっている。
+                #unspread時にはca_zbで取引をする必要がある。
+                self.TRADE_FLAG = 1
+            if last_trade_type == 'ca_zb':
+                #spread時にca_zbをやってしまっている。
+                #unspread時にはza_cbで取引をする必要がある。
+                self.TRADE_FLAG = 2
+
+            if lastrow[15] == None or lastrow[15] == '' or lastrow[16] == None or lastrow[16] == '':
+                log.critical('前回のspreadが記録されていません。')
+                log.critical('手動で修正する必要があります。')
                 sys.exit()
 
-            else:
-            #last_trade_status = 'spread'
-            #unspreadをしないで閉じてしまっている。
+            self.open_spread = lastrow[15]
+            self.close_spread = lastrow[16]
 
-                if last_trade_type == 'za_cb':
-                    #spread時にza_cbをやってしまっている。
-                    #unspread時にはca_zbで取引をする必要がある。
-                    self.TRADE_FLAG = 1
-                if last_trade_type == 'ca_zb':
-                    #spread時にca_zbをやってしまっている。
-                    #unspread時にはza_cbで取引をする必要がある。
-                    self.TRADE_FLAG = 2
-
-                if lastrow[15] == none or lastrow[15] == '' or lastrow[16] == none or lastrow[16] == '':
-                    log.critical('前回のspreadが記録されていません。')
-                    sys.exit()
-
-                self.open_spread = lastrow[15]
-                self.close_spread = lastrow[16]
-
-        log.critical(lastrow)
+        log.critical('スタート時ステータス:' + last_trade_status)
 
         return(self.TRADE_FLAG)
 
@@ -457,13 +464,14 @@ class ZaifCoincheckTrade:
             time.sleep(freq)
 
 
-
-
-
 if __name__ == "__main__":
 
-    ZaifCoincheckTrade().run()
-
+    try:
+        ZaifCoincheckTrade().run()
+    except Exception as e:
+        t = traceback.format_exc()
+        log.critical(t)
+        slack.Slack.post_message(t)
 
 """
 
