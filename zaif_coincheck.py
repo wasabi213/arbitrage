@@ -305,6 +305,7 @@ class ZaifCoincheckTrade:
             price_diff = board['ca_zb_board_count_price']
         else:
             trade_type = ''
+            log.critical(board)
             raise Exception
 
         log.critical("TRADE TYPE:" + trade_type)
