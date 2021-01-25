@@ -384,12 +384,12 @@ class ZaifCoincheckTrade:
 
             balance_before = self.getBalance()
 
-            #zaifで売った価格と数量を出力する。
-            zaif_jpy = int(balance_before['zaif_jpy']) + (btc_lot * zaif_bid)
-            zaif_btc = float(balance_before['zaif_btc']) - btc_lot
             #coincheckで買った価格と数量を出力する。
             coin_jpy = int(balance_before['coin_jpy']) - (btc_lot * coin_ask)
             coin_btc = float(balance_before['coin_btc']) + btc_lot
+            #zaifで売った価格と数量を出力する。
+            zaif_jpy = int(balance_before['zaif_jpy']) + (btc_lot * zaif_bid)
+            zaif_btc = float(balance_before['zaif_btc']) - btc_lot
 
             balance = {
                                 'zaif_jpy':zaif_jpy,
@@ -454,7 +454,7 @@ class ZaifCoincheckTrade:
         #info = self.getTradeType(board)
 
         #coincecheckの買い、Zaifの売りで、リバーススプレッドより値幅が開いた場合
-        if info['trade_type'] == 'ca_zb' and info['price_diff'] > self.reverse_spread:
+        if info['trade_type'] == 'za_cb' and info['price_diff'] > self.reverse_spread:
             self.coin_spread_over_count += 1
             self.zaif_spread_over_count = 0
         else:
@@ -465,7 +465,9 @@ class ZaifCoincheckTrade:
         if self.zaif_spread_over_count > self.price_over_count:
 
             #Zaifで買ってCoincheckで売る。
-            self.TradeBuyZaifSellCoincheck(self.btc_lot,board['zaif_tradable_ask_price'],board['coin_tradable_bid_price'])
+            self.TradeBuyZaifSellCoincheck( self.btc_lot,
+                                            board['zaif_tradable_ask_price'],
+                                            board['coin_tradable_bid_price'])
             self.zaif_spread_over_count = 0
             self.coin_spread_over_count = 0
 
@@ -555,11 +557,11 @@ class ZaifCoincheckTrade:
             else:
                 log.critical("##### Action Mode:REVERSE")
                 if self.balance['zaif_btc'] >  self.balance['coin_btc']:
-                    log.critical("Coincheck:BUY Zaif:SELL")
+                    log.critical("BUY:Coincheck SELL:Zaif")
                     log.critical("BTC      Zaif => Coincheck")
                     log.critical("JPY Coincheck => Zaif")
                 else:
-                    log.critical("Zaif:BUY Coincheck:SELL")
+                    log.critical("BUY:Zaif SELL:Coincheck")
                     log.critical("BTC Coincheck => Zaif")
                     log.critical("JPY      Zaif => Coincheck")
 
