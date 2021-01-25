@@ -58,80 +58,84 @@ class ZaifApi:
         balance_info = zaif.get_info2()
         return balance_info
 
-    ########################
+    ###############################
     #zaifの板情報を取得する。
-    ########################
+    #AskとBidが反対なので入れ替える。
+    ###############################
     def zaif_get_board(self):
         url = 'https://api.zaif.jp/api/1/depth/btc_jpy'
         result = requests.get(url).json()
+        result['wk'] = result.pop('asks')
+        result['asks'] = result.pop('bids')
+        result['bids'] = result['wk']
         return result
 
     #########################################################
     #板情報から指定された価格に指値が入れられている枚数を取得する。
     #########################################################
-    def zaif_get_board_price(self,result,category,price):
-        asks = result.get("asks")
-        bids = result.get("bids")
+    #def zaif_get_board_price(self,result,category,price):
+    #    asks = result.get("asks")
+    #    bids = result.get("bids")
+    #    board_array = []
 
-        board_array = []
+    #   if category == "asks":
+    #        board_array = asks
+    #    else:
+    #        board_array = bids
 
-        if category == "asks":
-            board_array = asks
-        else:
-            board_array = bids
+    #    for board_price,lot in board_array:
+    #        if price == board_price:
+    #            return lot
 
-        for board_price,lot in board_array:
-            if price == board_price:
-                return lot
-
-        return 0
+    #    return 0
 
     #板情報からaskを取得する。
-    def zaif_get_board_ask(self,result):
-        asks = result.get("asks")
-        return asks[0][0]
+    #def zaif_get_board_ask(self,result):
+    #    asks = result.get("asks")
+    #    return asks[0][0]
 
     #板情報からbidを取得する。
-    def zaif_get_board_bid(self,result):
-        bids = result.get("bids")
-        return bids[0][0]
+    #def zaif_get_board_bid(self,result):
+    #    bids = result.get("bids")
+    #    return bids[0][0]
 
     #板情報からaskのlotを取得する。
-    def zaif_get_board_ask_lot(self,result):
-        asks = result.get("asks")
-        return asks[0][1]
+    #def zaif_get_board_ask_lot(self,result):
+    #    asks = result.get("asks")
+    #    return asks[0][1]
 
     #板情報からbidのlotを取得する。
-    def zaif_get_board_bid_lot(self,result):
-        bids = result.get("bids")
-        return bids[0][1]
+    #def zaif_get_board_bid_lot(self,result):
+    #    bids = result.get("bids")
+    #    return bids[0][1]
 
 
     #######################################################################
     #板から指定された価格帯の枚数の合計を取得する。
     # ex.3を指定した場合、上から、または下から３枚の板の指値の合計枚数を返却する。
     #######################################################################
-    def zaif_get_board_ask_lot_sum(self,result,board_num):
-        lot = 0
-        asks = result.get("asks")
+    #def zaif_get_board_ask_lot_sum(self,result,board_num):
+    #    lot = 0
+    #    asks = result.get("asks")
 
-        for i in range(board_num):
-            lot = lot + float(asks[i][1])
+    #    for i in range(board_num):
+    #        lot = lot + float(asks[i][1])
 
-        return lot
+    #    return lot
 
-    def zaif_get_board_bid_lot_sum(self,result,board_num):
-        lot = 0
-        bids = result.get("bids")
+    #def zaif_get_board_bid_lot_sum(self,result,board_num):
+    #    lot = 0
+    #    bids = result.get("bids")
 
-        for i in range(board_num):
-            lot = lot + float(bids[i][1])
+    #    for i in range(board_num):
+    #        lot = lot + float(bids[i][1])
 
-        return lot
+    #    return lot
 
     #指定した板のロットを取得する。
     #指定した板がboard_numberより小さい場合は、board_numberのプライスを返却する。
     #指定した板までの合計枚数が、rate倍となるような板の価格を取得する。
+    '''
     def zaif_get_ticker_by_size(self,board,entry_lot_size,board_number,rate):
 
         ask_lot_sum = 0 
@@ -172,7 +176,8 @@ class ZaifApi:
             log.error("Error : 有効価格が取得できた板の範囲外にあります。")
 
         return {'bid': [bid,bid_lot_sum],'ask': [ask,ask_lot_sum]}
-
+    '''
+    
     ##########################
     #残高からjpyを取得する
     ##########################

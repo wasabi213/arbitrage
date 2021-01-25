@@ -230,6 +230,8 @@ class ZaifCoincheckTrade:
         #log.info(board_count)
         #log.info(len(zaif_ask))
 
+
+
         for i in range(board_count):
             zaif_ask[i]     = float(zaif_result['asks'][i][0])
             zaif_ask_lot[i] = float(zaif_result['asks'][i][1])
@@ -257,12 +259,16 @@ class ZaifCoincheckTrade:
             coin_tradable_bid_lot_total += coin_ask_lot[i]
 
         zaif_tradable_ask_price = float(zaif_result['asks'][board_count][0])
-        zaif_tradable_bid_price = float(zaif_result['asks'][board_count][0])
-        coin_tradable_ask_price = float(coin_result['bids'][board_count][0])
+        zaif_tradable_bid_price = float(zaif_result['bids'][board_count][0])
+        coin_tradable_ask_price = float(coin_result['asks'][board_count][0])
         coin_tradable_bid_price = float(coin_result['bids'][board_count][0])
 
-        za_cb_board_count_price = coin_tradable_bid_price - zaif_tradable_ask_price
-        ca_zb_board_count_price = zaif_tradable_bid_price - coin_tradable_ask_price 
+        #za_cb_board_count_price = coin_tradable_bid_price - zaif_tradable_ask_price
+        #ca_zb_board_count_price = zaif_tradable_bid_price - coin_tradable_ask_price 
+
+        za_cb_board_count_price = zaif_tradable_ask_price - coin_tradable_bid_price
+        ca_zb_board_count_price = coin_tradable_ask_price - zaif_tradable_bid_price 
+
 
 
         info = { 
@@ -303,15 +309,18 @@ class ZaifCoincheckTrade:
         elif board['ca_zb_board_count_price'] > board['za_cb_board_count_price']:
             trade_type = 'ca_zb'
             price_diff = board['ca_zb_board_count_price']
-        else:
+
+        elif board['za_cb_board_count_price'] == board['ca_zb_board_count_price']:
             trade_type = ''
-            log.critical(board)
+            price_diff = 0
+
+        else:
+            log.critical(board)         
             raise Exception
 
-        log.critical("TRADE TYPE:" + trade_type)
-        log.critical("差額:" + str(price_diff))
+        #log.critical("TRADE TYPE:" + trade_type)
+        #log.critical("差額:" + str(price_diff))
         return {'trade_type':trade_type,'price_diff':price_diff}
-
 
 
     def debugWriteBalance(self,balance):
@@ -393,10 +402,10 @@ class ZaifCoincheckTrade:
 
 
     #スプレッド取引を行う。
-    def spreadAction(self):
+    def spreadAction(self,board,board_info):
 
-        board = self.getBoardInfoWithCount(self.board_count,self.entry_rate)
-        board_info = self.getTradeType(board)
+        #board = self.getBoardInfoWithCount(self.board_count,self.entry_rate)
+        #board_info = self.getTradeType(board)
 
         if board_info['trade_type'] == 'za_cb' and board_info['price_diff'] > self.entry_spread:
             self.zaif_spread_over_count += 1
@@ -424,25 +433,25 @@ class ZaifCoincheckTrade:
         return
 
     #偏り解消取引を行う。
-    def reverseAction(self):
+    def reverseAction(self,board,board_info):
 
         #トレード方向を取得する。
         balance = self.getBalance()
 
         #ZaifにBTCが偏っている場合、
         if balance['zaif_btc'] > balance['coin_btc']:
-            self.reverseToCoincheck()
+            self.reverseToCoincheck(board,board_info)
 
         #coinchekckにBTCが偏っている場合、
         elif balance['coin_btc'] > balance['zaif_btc']:
-            self.reverseToZaif()
+            self.reverseToZaif(board,board_info)
 
         return
 
-    def reverseToZaif(self):
+    def reverseToZaif(self,board,info):
 
-        board = self.getBoardInfoWithCount(self.board_count,self.entry_rate)
-        info = self.getTradeType(board)
+        #board = self.getBoardInfoWithCount(self.board_count,self.entry_rate)
+        #info = self.getTradeType(board)
 
         #coincecheckの買い、Zaifの売りで、リバーススプレッドより値幅が開いた場合
         if info['trade_type'] == 'ca_zb' and info['price_diff'] > self.reverse_spread:
@@ -463,8 +472,8 @@ class ZaifCoincheckTrade:
         return
 
     def reverseToCoincheck(self,board,info):
-        board = self.getBoardInfoWithCount(self.board_count,self.entry_rate)
-        info = self.getTradeType(board)
+        #board = self.getBoardInfoWithCount(self.board_count,self.entry_rate)
+        #info = self.getTradeType(board)
 
         #log.info(board)
         #coincecheckの買い、Zaifの売りで、リバーススプレッドより値幅が開いた場合
@@ -523,22 +532,48 @@ class ZaifCoincheckTrade:
                 log.critical('SPREAD -> REVERSE')
 
             elif self.action_mode == 'reverse':
-                if self.balance['zaif_btc'] >= self.btc_start_amount and self.balance['coin_btc'] >= self.btc_start_amount:
+                if(self.balance['zaif_btc'] >= self.btc_start_amount and
+                   self.balance['coin_btc'] >= self.btc_start_amount):
+
                     self.action_mode = 'spread'
                     log.critical('REVERSE -> SPREAD')
 
             else:
                 self.action_mode = 'spread'
 
+            #板情報を取得する。
+            board = self.getBoardInfoWithCount(self.board_count,self.entry_rate)
+            #トレード方向を取得する。
+            board_info = self.getTradeType(board)
+
             if self.action_mode == 'spread':
                 #Spreadモードに入る。
-                log.critical("##### Action:SPREAD")
-                self.spreadAction()
+                log.critical("##### Action Mode:SPREAD")
+                self.spreadAction(board,board_info)
 
             #残高が足りない場合は、リバースモードに入る。
             else:
-                log.critical("##### Action:REVERSE")
-                self.reverseAction()
+                log.critical("##### Action Mode:REVERSE")
+                if self.balance['zaif_btc'] >  self.balance['coin_btc']:
+                    log.critical("Coincheck:BUY Zaif:SELL")
+                    log.critical("BTC      Zaif => Coincheck")
+                    log.critical("JPY Coincheck => Zaif")
+                else:
+                    log.critical("Zaif:BUY Coincheck:SELL")
+                    log.critical("BTC Coincheck => Zaif")
+                    log.critical("JPY      Zaif => Coincheck")
+
+                self.reverseAction(board,board_info)
+
+            log.critical("Zaif:Ask " + str(board['zaif_ask'][0]))
+            log.critical("Zaif:Bid " + str(board['zaif_bid'][0]))
+            log.critical("Coincheck:Ask " + str(board['coin_ask'][0]))
+            log.critical("Coincheck:Bid " + str(board['coin_bid'][0]))
+            log.critical("ZA-CB:" + str(board['zaif_ask'][0] - board['coin_bid'][0]))
+            log.critical("CA-ZB:" + str(board['coin_ask'][0] - board['zaif_bid'][0]))
+            log.critical("#### TRADE")
+            log.critical("ZA-CB:" + str(board['zaif_tradable_ask_price'] - board['coin_tradable_bid_price'] ))
+            log.critical("CA-ZB:" + str(board['coin_tradable_ask_price'] - board['zaif_tradable_bid_price'] ))
 
             log.critical("-----------------------------------------------------------------")
             #指定時間停止する。
