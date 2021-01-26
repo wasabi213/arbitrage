@@ -27,6 +27,8 @@ class CoincheckApi:
         self.API_SECRET_KEY = self.conf.get("api_keys","coin_secret_key")
         self.LOG_PATH = self.conf.get("path","trade_log_path")  #ログパスの取得
 
+        self.connection_error_count = 0
+
     ##coincheck関係
     #######################################
     #coincheckのPrivateAPIリクエスト送信関数
@@ -143,8 +145,26 @@ class CoincheckApi:
     #coincheckの板情報を取得する。
     #############################
     def coincheck_get_board(self):
-        url = 'https://coincheck.jp/api/order_books'
-        result = requests.get(url).json()
+
+        try:
+            url = 'https://coincheck.jp/api/order_books'
+            result = requests.get(url).json()
+
+        except ConnectionResetError as c:
+            log.critical("Coincheck:coincheck_get_board ConnectionResetError")
+            t = traceback.format_exc()
+            slack.Slack.post_message(t)
+
+            self.connection_error_count += 1
+            if self.connection_error_count > 2:
+                log.critical("Coincheck:coincheck_get_board ConnectionResetError count over.")
+                quit()
+            else:
+                time.sleep(1)
+                self.coincheck_get_board()
+
+        else:
+            self.connection_error_count = 0
         return result
 
     #################################
