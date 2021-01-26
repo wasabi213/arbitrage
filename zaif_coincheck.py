@@ -3,7 +3,6 @@
 import os
 import pathlib
 import traceback
-#import logger
 import datetime
 import hashlib
 import hmac
@@ -54,15 +53,6 @@ class ZaifCoincheckTrade:
         self.conf.read_file(codecs.open(CONFIG_FILE,"r","utf8"))
 
         self.LOG_PATH = self.conf.get('path','trade_log_path') 
-        #self.TRADE_FLAG = -1
-
-        #self.open_spread = self.conf.getint('trade','open_spread')
-        #self.close_spread = self.conf.getint('trade','close_spread')
-
-        #self.zaif_yen_amount = 100000 #日本円初回残高
-        #self.zaif_btc_amount = 0.1    #BTC初回残高
-        #self.coincheck_yen_amount = 100000 #日本円初回残高
-        #self.coincheck_btc_amount = 0.1    #BTC初回残高
 
         #--------------------------------------------------------------------
         #動作モード
@@ -435,29 +425,16 @@ class ZaifCoincheckTrade:
 
         return
 
-    #偏り解消取引を行う。
-    def reverseAction(self,board,board_info):
-
-        #トレード方向を取得する。
-        balance = self.getBalance()
-
-        #ZaifにBTCが偏っている場合、
-        if balance['zaif_btc'] > balance['coin_btc']:
-            self.reverseToCoincheck(board,board_info)
-
-        #coinchekckにBTCが偏っている場合、
-        elif balance['coin_btc'] > balance['zaif_btc']:
-            self.reverseToZaif(board,board_info)
-
-        return
 
     def reverseToZaif(self,board,info):
+        log.critical('trade_type:' + info['trade_type'])
+        log.critical('price_diff:' + str(info['price_diff']))
 
         #board = self.getBoardInfoWithCount(self.board_count,self.entry_rate)
         #info = self.getTradeType(board)
 
         #coincecheckの買い、Zaifの売りで、リバーススプレッドより値幅が開いた場合
-        if info['trade_type'] == 'za_cb' and info['price_diff'] > self.reverse_spread:
+        if info['trade_type'] == 'ca_zb' and info['price_diff'] > self.reverse_spread:
             self.coin_spread_over_count += 1
             self.zaif_spread_over_count = 0
         else:
@@ -477,14 +454,14 @@ class ZaifCoincheckTrade:
         return
 
     def reverseToCoincheck(self,board,info):
-        #board = self.getBoardInfoWithCount(self.board_count,self.entry_rate)
-        #info = self.getTradeType(board)
 
-        #log.info(board)
-        #coincecheckの買い、Zaifの売りで、リバーススプレッドより値幅が開いた場合
-        if info['trade_type'] == 'ca_zb' and info['price_diff'] > self.reverse_spread:
-            self.coin_spread_over_count += 1
-            self.zaif_spread_over_count = 0
+        log.critical('trade_type:' + info['trade_type'])
+        log.critical('price_diff:' + str(info['price_diff']))
+   
+        #Zaifの買い、Coincheckの売りで、リバーススプレッドより値幅が開いた場合
+        if info['trade_type'] == 'za_cb' and info['price_diff'] > self.reverse_spread:
+            self.coin_spread_over_count = 0
+            self.zaif_spread_over_count += 1
         else:
             self.coin_spread_over_count = 0
             self.zaif_spread_over_count = 0
@@ -556,19 +533,23 @@ class ZaifCoincheckTrade:
                 log.critical("##### Action Mode:SPREAD")
                 self.spreadAction(board,board_info)
 
-            #残高が足りない場合は、リバースモードに入る。
+            #残高が足りない場合は、リバースモード（偏り解消モード）に入る。
             else:
                 log.critical("##### Action Mode:REVERSE")
+
                 if self.balance['zaif_btc'] >  self.balance['coin_btc']:
                     log.critical("BUY:Coincheck SELL:Zaif")
                     log.critical("BTC      Zaif => Coincheck")
                     log.critical("JPY Coincheck => Zaif")
-                else:
+                    self.reverseToCoincheck(board,board_info)
+
+                elif self.balance['coin_btc'] > self.balance['zaif_btc']:
                     log.critical("BUY:Zaif SELL:Coincheck")
                     log.critical("BTC Coincheck => Zaif")
                     log.critical("JPY      Zaif => Coincheck")
-
-                self.reverseAction(board,board_info)
+                    self.reverseToZaif(board,board_info)
+                else:
+                    pass
 
             log.critical("Zaif:Ask " + str(board['zaif_ask'][0]))
             log.critical("Zaif:Bid " + str(board['zaif_bid'][0]))
@@ -584,6 +565,33 @@ class ZaifCoincheckTrade:
             #指定時間停止する。
             time.sleep(self.interval_second)
     #-----------------------------------------------------------------------------------------------------------------
+
+
+    #偏り解消取引を行う。
+    #def reverseAction(self,board,board_info):
+
+        #トレード方向を取得する。
+        #balance = self.getBalance()
+
+        #ZaifにBTCが偏っている場合、
+        #if balance['zaif_btc'] > balance['coin_btc']:
+        #    self.reverseToCoincheck(board,board_info)
+
+        #coinchekckにBTCが偏っている場合、
+        #elif balance['coin_btc'] > balance['zaif_btc']:
+        #    self.reverseToZaif(board,board_info)
+
+        #return
+
+
+
+
+
+
+
+
+
+
 
 if __name__ == "__main__":
 
