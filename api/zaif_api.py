@@ -1,4 +1,4 @@
-import logger
+#import logger
 import datetime
 import hashlib
 import hmac
