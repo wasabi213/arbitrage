@@ -93,6 +93,9 @@ class ZaifCoincheckTrade:
         #何秒ごとに処理を行うか。（秒）
         self.interval_second = self.conf.getint('trade','interval_second')
 
+        #どちらのブローカーにBTCを戻すか。
+        self.reverse_broker = ''
+
         #最新の残高状態
         self.balance = []
 
@@ -286,6 +289,8 @@ class ZaifCoincheckTrade:
                 }
 
 
+        #log.critical(info)
+
         return info
 
     #トレード方向を取得する      
@@ -329,7 +334,10 @@ class ZaifCoincheckTrade:
 
     #Zaifで買ってCoincheckで売る。
     def TradeBuyZaifSellCoincheck(self,btc_lot,zaif_ask,coin_bid):
+        log.critical("####################################")
         log.critical("##### BUY => Zaif  SELL => Coincheck")
+        log.critical("####################################")
+
         if self.mode == "production":
             #zaifで買う。
             self.zaif_api.trade_zaif_ask(btc_lot,zaif_ask)
@@ -350,6 +358,11 @@ class ZaifCoincheckTrade:
             coin_jpy = int(balance_before['coin_jpy']) + btc_lot * coin_bid
             coin_btc = float(balance_before['coin_btc']) - btc_lot
 
+
+            log.critical("zaif_ask:" + str(zaif_ask))
+            log.critical("coin_bid:" + str(coin_bid))
+            quit()
+
             balance = {
                                 'zaif_jpy':zaif_jpy,
                                 'zaif_btc':zaif_btc,
@@ -366,7 +379,9 @@ class ZaifCoincheckTrade:
 
     #Coincheckで買って、Zaifで売る。
     def TradeBuyCoincheckSellzaif(self,btc_lot,coin_ask,zaif_bid):
+        log.critical("####################################")
         log.critical("##### BUY => Coincheck  SELL => Zaif")
+        log.critical("####################################")
 
         if self.mode == "production":
             #zaifで売る。
@@ -384,6 +399,11 @@ class ZaifCoincheckTrade:
             zaif_jpy = int(balance_before['zaif_jpy']) + (btc_lot * zaif_bid)
             zaif_btc = float(balance_before['zaif_btc']) - btc_lot
 
+            log.critical("coin_ask:" + str(coin_ask))
+            log.critical("zaif_bid:" + str(zaif_bid))
+            quit()
+
+
             balance = {
                                 'zaif_jpy':zaif_jpy,
                                 'zaif_btc':zaif_btc,
@@ -400,24 +420,28 @@ class ZaifCoincheckTrade:
         #board = self.getBoardInfoWithCount(self.board_count,self.entry_rate)
         #board_info = self.getTradeType(board)
 
-        if board_info['trade_type'] == 'za_cb' and board_info['price_diff'] > self.entry_spread:
+        if(board['coin_tradable_bid_price'] > board['zaif_tradable_ask_price'] and
+           board['coin_tradable_bid_price'] - board['zaif_tradable_ask_price'] > self.entry_spread):
+        #if board_info['trade_type'] == 'za_cb' and board_info['price_diff'] > self.entry_spread:
             self.zaif_spread_over_count += 1
             self.coin_spread_over_count = 0
 
-        elif board_info['trade_type'] == 'ca_zb' and board_info['price_diff'] > self.entry_spread:
+        elif(board['zaif_tradable_bid_price'] > board['coin_tradable_ask_price'] and
+             board['zaif_tradable_bid_price'] - board['coin_tradable_ask_price'] > self.entry_spread):
+        #elif board_info['trade_type'] == 'ca_zb' and board_info['price_diff'] > self.entry_spread:
             self.coin_spread_over_count += 1
             self.zaif_spread_over_count = 0
         else:
             self.zaif_spread_over_count = 0
             self.coin_spread_over_count = 0
 
-        if self.zaif_spread_over_count > self.price_over_count:
+        if self.zaif_spread_over_count >= self.price_over_count:
             #Zaifで買ってCoincheckで売る。
             self.TradeBuyZaifSellCoincheck(self.btc_lot,board['zaif_tradable_ask_price'],board['coin_tradable_bid_price'])
             self.zaif_spread_over_count = 0
             self.coin_spread_over_count = 0
             
-        elif self.coin_spread_over_count > self.price_over_count:
+        elif self.coin_spread_over_count >= self.price_over_count:
             #Coincheckで買って、Zaifで売る。
             self.TradeBuyCoincheckSellzaif(self.btc_lot,board['coin_tradable_ask_price'],board['zaif_tradable_bid_price'])
             self.zaif_spread_over_count = 0
@@ -432,17 +456,22 @@ class ZaifCoincheckTrade:
 
         #board = self.getBoardInfoWithCount(self.board_count,self.entry_rate)
         #info = self.getTradeType(board)
+        #Zaifの買い、Coincheckの売りで、リバーススプレッドより値幅が開いた場合
 
-        #coincecheckの買い、Zaifの売りで、リバーススプレッドより値幅が開いた場合
-        if info['trade_type'] == 'ca_zb' and info['price_diff'] > self.reverse_spread:
-            self.coin_spread_over_count += 1
-            self.zaif_spread_over_count = 0
+        if(board['coin_tradable_bid_price'] > board['zaif_tradable_ask_price'] and
+           board['coin_tradable_bid_price'] - board['zaif_tradable_ask_price'] > self.entry_spread):
+
+        #if info['trade_type'] == 'za_cb' and info['price_diff'] > self.reverse_spread:
+            self.coin_spread_over_count = 0
+            self.zaif_spread_over_count += 1
         else:
             self.coin_spread_over_count = 0
             self.zaif_spread_over_count = 0
 
+        log.critical("リバーススプレッド閾値超過回数：" + str(self.zaif_spread_over_count))
+
         #連続でスプレッドが開いていた場合
-        if self.zaif_spread_over_count > self.price_over_count:
+        if self.zaif_spread_over_count >= self.price_over_count:
 
             #Zaifで買ってCoincheckで売る。
             self.TradeBuyZaifSellCoincheck( self.btc_lot,
@@ -457,17 +486,22 @@ class ZaifCoincheckTrade:
 
         log.critical('trade_type:' + info['trade_type'])
         log.critical('price_diff:' + str(info['price_diff']))
-   
-        #Zaifの買い、Coincheckの売りで、リバーススプレッドより値幅が開いた場合
-        if info['trade_type'] == 'za_cb' and info['price_diff'] > self.reverse_spread:
-            self.coin_spread_over_count = 0
-            self.zaif_spread_over_count += 1
+
+        #Coincheckの買い、Zaifの売りで、リバーススプレッドより値幅が開いた場合
+        if(board['zaif_tradable_bid_price'] > board['coin_tradable_ask_price'] and
+           board['zaif_tradable_bid_price'] - board['coin_tradable_ask_price'] > self.entry_spread):
+        #if info['trade_type'] == 'ca_zb' and info['price_diff'] > self.reverse_spread:
+            self.coin_spread_over_count += 1
+            self.zaif_spread_over_count = 0
         else:
             self.coin_spread_over_count = 0
             self.zaif_spread_over_count = 0
 
+
+        log.critical("リバーススプレッド閾値超過回数：" + str(self.coin_spread_over_count))
+
         #連続でスプレッドが開いていた場合           
-        if self.coin_spread_over_count > self.price_over_count:
+        if self.zaif_spread_over_count >= self.price_over_count:
             #Coincheckで買って、Zaifで売る。
             self.TradeBuyCoincheckSellzaif( self.btc_lot,
                                             board['coin_tradable_ask_price'],
@@ -511,17 +545,29 @@ class ZaifCoincheckTrade:
             if ( self.action_mode == 'spread' and 
                  self.checkBalance(self.balance) == False ):
                 self.action_mode = 'reverse'
+
+                if self.balance['zaif_btc'] > self.balance['coin_btc']:
+                    self.reverse_broker = 'ZTOC'
+                else:
+                    self.reverse_broker = 'CTOZ'
                 log.critical('SPREAD -> REVERSE')
 
             elif self.action_mode == 'reverse':
-                if(self.balance['zaif_btc'] >= self.btc_start_amount and
-                   self.balance['coin_btc'] >= self.btc_start_amount):
 
+                if self.reverse_broker == 'ZTOC' and self.balance['coin_btc'] >= self.btc_start_amount:
                     self.action_mode = 'spread'
+                    self.reverse_broker = ''
                     log.critical('REVERSE -> SPREAD')
 
+                elif self.reverse_broker == 'CTOZ' and self.balance['zaif_btc'] >= self.btc_start_amount:
+                    self.action_mode = 'spread'
+                    self.reverse_broker = ''
+                    log.critical('REVERSE -> SPREAD')
+                else:
+                    pass
             else:
                 self.action_mode = 'spread'
+                self.reverse_broker = ''
 
             #板情報を取得する。
             board = self.getBoardInfoWithCount(self.board_count,self.entry_rate)
