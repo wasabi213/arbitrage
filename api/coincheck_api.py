@@ -10,9 +10,12 @@ import csv
 import configparser
 import codecs
 import ccxt
+from common.logger import Logger
 
-CONFIG_FILE = r'../config/zaif_coincheck_config.ini'
-log = logger.Logger(__name__)
+
+CONFIG_FILE = '../config/zaif_coincheck_config.ini'
+#log = logger.Logger(__name__)
+log = Logger(__name__)
 
 class CoincheckApi:
 
@@ -163,6 +166,18 @@ class CoincheckApi:
                 time.sleep(1)
                 self.coincheck_get_board()
 
+        except json.decoder.JSONDecodeError as j:
+            log.critical("Coincheck:coincheck_get_board JSONDecodeError")
+            t = traceback.format_exc()
+            slack.Slack.post_message(t)
+
+            self.connection_error_count += 1
+            if self.connection_error_count > 2:
+                log.critical("Coincheck:coincheck_get_board JSONDecodeError count over.")
+                quit()
+            else:
+                time.sleep(1)
+                self.coincheck_get_board()
         else:
             self.connection_error_count = 0
         return result

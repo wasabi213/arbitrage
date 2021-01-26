@@ -3,7 +3,7 @@
 import os
 import pathlib
 import traceback
-import logger
+#import logger
 import datetime
 import hashlib
 import hmac
@@ -17,12 +17,15 @@ import codecs
 from zaifapi import ZaifPublicApi,ZaifTradeApi
 from api import zaif_api,coincheck_api
 from common import spreadlog,slack
+from common.logger import Logger
 
 
 CONFIG_FILE = '../config/zaif_coincheck_config.ini'
 MODE = "test"
 
-log = logger.Logger(__name__)
+#log = logger.Logger(__name__)
+log = Logger(__name__)
+ 
 
 ####初期設定値####
 #api設定

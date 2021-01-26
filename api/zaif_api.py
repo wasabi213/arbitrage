@@ -9,11 +9,12 @@ import sys
 import csv
 import configparser
 import codecs
-
+from common.logger import Logger
 from zaifapi import ZaifPublicApi,ZaifTradeApi
 
 CONFIG_FILE = '../config/zaif_coincheck_config.ini'
-log = logger.Logger(__name__)
+#log = logger.Logger(__name__)
+log = Logger(__name__)
 
 class ZaifApi:
 
@@ -177,7 +178,7 @@ class ZaifApi:
 
         return {'bid': [bid,bid_lot_sum],'ask': [ask,ask_lot_sum]}
     '''
-    
+
     ##########################
     #残高からjpyを取得する
     ##########################
