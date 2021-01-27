@@ -444,7 +444,7 @@ class ZaifCoincheckTrade:
             
         elif self.coin_spread_over_count >= self.price_over_count:
             #Coincheckで買って、Zaifで売る。
-            self.TradeBuyCoincheckSellzaif( self.btc_lot,
+            self.TradeBuyCoincheckSellZaif( self.btc_lot,
                                             board['coin_tradable_ask_price'],
                                             board['zaif_tradable_bid_price'])
             self.zaif_spread_over_count = 0
@@ -513,7 +513,7 @@ class ZaifCoincheckTrade:
         #連続でスプレッドが開いていた場合           
         if self.zaif_spread_over_count >= self.price_over_count:
             #Coincheckで買って、Zaifで売る。
-            self.TradeBuyCoincheckSellzaif( self.btc_lot,
+            self.TradeBuyCoincheckSellZaif( self.btc_lot,
                                             board['coin_tradable_ask_price'],
                                             board['zaif_tradable_bid_price']
                                             )
