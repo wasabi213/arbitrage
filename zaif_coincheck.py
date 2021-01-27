@@ -616,7 +616,7 @@ class ZaifCoincheckTrade:
             log.critical("-------------------- Best Price Difference")
             log.critical("ZA-CB:" + str(board['coin_bid'][0] - board['zaif_ask'][0]))
             log.critical("CA-ZB:" + str(board['zaif_bid'][0] - board['coin_ask'][0]))
-            log.critical("-------------------- Tradeble Price Difference")
+            log.critical("-------------------- Tradable Price Difference")
             log.critical("ZA-CB:" + str(board['coin_tradable_bid_price'] - board['zaif_tradable_ask_price'] ))
             log.critical("CA-ZB:" + str(board['zaif_tradable_bid_price'] - board['coin_tradable_ask_price'] ))
 
