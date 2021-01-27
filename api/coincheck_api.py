@@ -68,8 +68,6 @@ class CoincheckApi:
         #order_type : market_sell : 成行注文　現物取引　売り
         nonce = int((datetime.datetime.today() - datetime.datetime(2017,1,1)).total_seconds()) * 100
 
- 
-
         c = self.ccPrivateApi("/api/accounts/balance",nonce)
         r = c.json()
 
@@ -125,7 +123,6 @@ class CoincheckApi:
         if r['success'] != True:
             error_message = r['error']
             msg = str(datetime.datetime.now()) + ',ccerror,'+ str(error_message) + '\n'
-            print(msg)
             log_output(trade_log_path,msg)
 
         return r

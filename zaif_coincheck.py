@@ -343,22 +343,54 @@ class ZaifCoincheckTrade:
             self.zaif_api.trade_zaif_ask(btc_lot,zaif_ask)
             #coincheckで売る。
             self.coin_api.trade_coin_bid(btc_lot)
-
             #zaifとコインチェックの残高を取得する。
             balance = self.getBlance()
 
         else:
             #balance_before = self.debugReadBalance()
             balance_before = self.getBalance()
-
             #zaifで買った価格と数量を出力する。
             zaif_jpy = int(balance_before['zaif_jpy']) - (btc_lot * zaif_ask)
             zaif_btc = float(balance_before['zaif_btc']) + btc_lot
             #coincheckで売った価格と数量を出力する。
-            coin_jpy = int(balance_before['coin_jpy']) + btc_lot * coin_bid
+            coin_jpy = int(balance_before['coin_jpy']) + (btc_lot * coin_bid)
             coin_btc = float(balance_before['coin_btc']) - btc_lot
 
-            #zaifで売った価格と数量を出力する。
+            log.critical("coin_ask:" + str(zaif_ask))
+            log.critical("zaif_bid:" + str(coin_bid))
+
+            balance = {
+                                'zaif_jpy':zaif_jpy,
+                                'zaif_btc':zaif_btc,
+                                'coin_jpy':coin_jpy,
+                                'coin_btc':coin_btc
+                            }
+ 
+            self.debugWriteBalance(balance)
+
+
+    #Coincheckで買ってZaifで売る。
+    def TradeBuyCoincheckSellZaif(self,btc_lot,coin_ask,zaif_bid):
+        log.critical("####################################")
+        log.critical("##### BUY => Coincheck  SELL => Zaif")
+        log.critical("####################################")
+
+        if self.mode == "production":
+
+            #Coincheckで買う
+            self.coin_api.trade_coin_ask(btc,coin_ask)
+            #zaifで売る。
+            self.zaif_api.trade_zaif_bid(btc,zaif_bid)
+            #zaifとコインチェックの残高を取得する。
+            balance = self.getBlance()
+
+        else:
+            balance_before = self.getBalance()
+            #Coincheckで買った価格と数量を出力する。
+            coin_jpy = int(balance_before['coin_jpy']) - (btc_lot * coin_ask)
+            coin_btc = float(balance_before['coin_btc']) + btc_lot
+
+            #coincheckで売った価格と数量を出力する。
             zaif_jpy = int(balance_before['zaif_jpy']) + (btc_lot * zaif_bid)
             zaif_btc = float(balance_before['zaif_btc']) - btc_lot
 
@@ -373,7 +405,6 @@ class ZaifCoincheckTrade:
                             }
  
             self.debugWriteBalance(balance)
-
 
     #スプレッド取引を行う。
     def spreadAction(self,board,board_info):
@@ -476,7 +507,6 @@ class ZaifCoincheckTrade:
         else:
             self.coin_spread_over_count = 0
             self.zaif_spread_over_count = 0
-
 
         log.critical("リバーススプレッド閾値超過回数：" + str(self.coin_spread_over_count))
 
