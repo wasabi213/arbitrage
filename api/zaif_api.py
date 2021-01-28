@@ -8,6 +8,7 @@ import sys
 import csv
 import configparser
 import codecs
+from retry import retry
 from common.logger import Logger
 from zaifapi import ZaifPublicApi,ZaifTradeApi
 
@@ -51,18 +52,23 @@ class ZaifApi:
     ################################
     #残高情報を取得する。
     ################################
+    @retry(exceptions=(Exception),tries=3,delay=5)
     def zaif_get_info2(self):
         zaif = ZaifTradeApi(self.API_KEY,self.API_SECRET_KEY)
         balance_info = zaif.get_info2()
+
         return balance_info
 
     ###############################
     #zaifの板情報を取得する。
     #AskとBidが反対なので入れ替える。
     ###############################
+    @retry(exceptions=(Exception),tries=3,delay=5)
     def zaif_get_board(self):
+        
         url = 'https://api.zaif.jp/api/1/depth/btc_jpy'
         result = requests.get(url).json()
+
         return result
 
 
