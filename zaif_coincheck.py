@@ -511,7 +511,7 @@ class ZaifCoincheckTrade:
         log.critical("リバーススプレッド閾値超過回数：" + str(self.coin_spread_over_count))
 
         #連続でスプレッドが開いていた場合           
-        if self.zaif_spread_over_count >= self.price_over_count:
+        if self.coin_spread_over_count >= self.price_over_count:
             #Coincheckで買って、Zaifで売る。
             self.TradeBuyCoincheckSellZaif( self.btc_lot,
                                             board['coin_tradable_ask_price'],
