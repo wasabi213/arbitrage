@@ -491,12 +491,21 @@ class ZaifCoincheckTrade:
 
             elif self.action_mode == 'reverse':
 
-                if self.reverse_broker == 'ZTOC' and self.balance['coin_btc'] >= self.btc_start_amount:
+                #
+                # 最初の残高に戻るまで待たずに、btcの最低残高に戻ったら、エントリできるようにする。
+                #
+                if( self.reverse_broker == 'ZTOC' and
+                    self.balance['coin_btc'] >= self.minimum_btc_limit and
+                    self.balance['zaif_jpy'] >= self.minimum_yen_limit ):
+
                     self.action_mode = 'spread'
                     self.reverse_broker = ''
                     log.critical('REVERSE -> SPREAD')
 
-                elif self.reverse_broker == 'CTOZ' and self.balance['zaif_btc'] >= self.btc_start_amount:
+                elif( self.reverse_broker == 'CTOZ' and
+                      self.balance['zaif_btc'] >= self.minimum_btc_limit and
+                      self.balance['coin_jpy'] >= self.minimum_yen_limit ):
+
                     self.action_mode = 'spread'
                     self.reverse_broker = ''
                     log.critical('REVERSE -> SPREAD')

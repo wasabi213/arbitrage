@@ -9,12 +9,14 @@ import csv
 import configparser
 import codecs
 from retry import retry
-from common.logger import Logger
+#from .logger import Logger
+
+
 from zaifapi import ZaifPublicApi,ZaifTradeApi
 
 CONFIG_FILE = '../config/zaif_coincheck_config.ini'
-#log = logger.Logger(__name__)
-log = Logger(__name__)
+
+#log = Logger(__name__)
 
 class ZaifApi:
 
@@ -83,3 +85,15 @@ class ZaifApi:
     ##########################
     def zaif_get_balance_btc(self,result):
         return result['funds']['btc']
+
+if __name__ == "__main__":
+
+    print("Test start/")
+
+    api = ZaifApi()
+
+    #api.trade_zaif_bid(0,0)
+
+    print(api.zaif_get_info2())
+    print(api.zaif_get_board())
+

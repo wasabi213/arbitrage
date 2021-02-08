@@ -1,4 +1,5 @@
 #import logger
+#import Logger
 import datetime
 import hashlib
 import hmac
@@ -6,14 +7,17 @@ import requests
 import json
 import time
 import sys
+import os
 import csv
 import configparser
 import codecs
 import ccxt
 from retry import retry
 
+import pathlib
+current_dir = pathlib.Path(__file__).resolve().parent
+sys.path.append( str(current_dir) + '/../' )
 from common.logger import Logger
-
 
 CONFIG_FILE = '../config/zaif_coincheck_config.ini'
 #log = logger.Logger(__name__)
@@ -76,7 +80,7 @@ class CoincheckApi:
             error_message = r['error']
             msg = str(datetime.datetime.now()) + ',ccerror,'+ str(error_message) + '\n'
             log.error(msg)
-            #log_output(trade_log_path,msg)
+
         return r
 
     ###############################################
@@ -103,7 +107,6 @@ class CoincheckApi:
             error_message = r['error']
             msg = str(datetime.datetime.now()) + ',ccerror,'+ str(error_message) + '\n'
             log.error(msg)
-            log_output(trade_log_path,msg)
 
         return r
 
@@ -125,7 +128,7 @@ class CoincheckApi:
         if r['success'] != True:
             error_message = r['error']
             msg = str(datetime.datetime.now()) + ',ccerror,'+ str(error_message) + '\n'
-            log_output(trade_log_path,msg)
+            log.error(msg)
 
         return r
     ##############################
@@ -164,3 +167,17 @@ class CoincheckApi:
     ##########################
     def coin_get_balance_btc(self,result):
         return result['btc']
+
+
+if __name__ == "__main__":
+
+    print("Test start/")
+
+    api = CoincheckApi()
+
+    print(api.coin_get_balance())
+    print(api.coin_get_ticker())
+    print(api.trade_coin_bid(0))
+    print(api.trade_coin_ask(0,0))
+    print(api.trade_coin_ask_limit_price(0,0))
+    print(api.coincheck_get_board())
