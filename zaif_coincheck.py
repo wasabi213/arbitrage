@@ -1,4 +1,5 @@
 # coding:utf-8
+
 ####import設定####
 import os
 import pathlib
@@ -20,31 +21,7 @@ from common.logger import Logger
 
 
 CONFIG_FILE = '../config/zaif_coincheck_config.ini'
-MODE = "test"
-
-#log = logger.Logger(__name__)
 log = Logger(__name__)
- 
-
-####初期設定値####
-#api設定
-
-#初期値
-#btc = 0.005 #取引量設定（0.006以上推奨※最低取引量は0.005）
-#freq = 3 #繰り返し周期[sec]
-#spread_Th = 1000 #「差が十分広がっている」とみなすしきい値
-#unspread_Th = 500 #「差が十分閉じている」とみなすしきい値
-#entry_spread = 1000
-#reverse_spread = 500
-#entry_rate = 2 # 取引したいbtcの量の何倍の指値が板に入っていたらエントリするかの値
-#spread_count_Th = 2 #このしきい値以上の回数spread_Thを満たせば取引実施
-#unspread_count_Th = 2 #このしきい値以上の回数unspread_Thを満たせば逆取引実施
-#retry_count_Th = 100 #サーバ接続エラーなどでプログラムが停止したとき、このしきい値の回数リトライ実施
-#retry_freq = 3  #リトライ実施時のwait time[sec]
-#flag = -1
-
-
-
 
 class ZaifCoincheckTrade:
 
@@ -106,7 +83,6 @@ class ZaifCoincheckTrade:
         
         #DEBUG用残高ファイル
         self.DEBUG_BALANCE_FILE = self.conf.get('debug','DEBUG_BALANCE_FILE')
-        #self.create_status_log()
 
     #status_logを作成する。
     def create_debug_log(self):
@@ -164,23 +140,20 @@ class ZaifCoincheckTrade:
             log.critical('Coincheckの残高は、￥' + str(balance['coin_jpy']) + 'です。')
             log.info('coincheckの残高の下限は' + str(self.minimum_yen_limit) + 'です。')
             return False
+
         elif float(balance['coin_btc']) <= float(self.minimum_btc_limit):
             log.critical('CoincheckのBTC残高が下限に達しました。')
             return False
+
         elif int(balance['zaif_jpy']) <= int(self.minimum_yen_limit):
             log.critical('zaifの円残高が下限に達しました。')
             return False
+
         elif float(balance['zaif_btc']) <= float(self.minimum_btc_limit):
             log.critical('zaifのBTC残高が下限に達しました。')
             return False
 
         return True
-
-    #口座の状態の修正が必要かチェックする。
-
-    #スプレッドがしきい値を超えたかチェックする。
-    #板の厚みも含めてチェックする。
-
 
     #####################################################
     #トレードを確実にするために、事前にした枚数の板の合計を取得する。
@@ -222,32 +195,16 @@ class ZaifCoincheckTrade:
         coin_result = self.coin_api.coincheck_get_board()
         zaif_result = self.zaif_api.zaif_get_board()
 
-        #log.info(zaif_result['asks'])
-        #log.info(board_count)
-        #log.info(len(zaif_ask))
-
-
-
         for i in range(board_count):
             zaif_ask[i]     = float(zaif_result['asks'][i][0])
             zaif_ask_lot[i] = float(zaif_result['asks'][i][1])
             zaif_bid[i]     = float(zaif_result['bids'][i][0])
             zaif_bid_lot[i] = float(zaif_result['bids'][i][1])
 
-            #log.info(zaif_ask[i])
-            #log.info(zaif_ask_lot[i])
-            #log.info(zaif_bid[i])
-            #log.info(zaif_bid_lot[i])
-
             coin_ask[i]     = float(coin_result['asks'][i][0])
             coin_ask_lot[i] = float(coin_result['asks'][i][1])
             coin_bid[i]     = float(coin_result['bids'][i][0])
             coin_bid_lot[i] = float(coin_result['bids'][i][1])
-
-            #log.info(coin_ask[i])
-            #log.info(coin_ask_lot[i])
-            #log.info(coin_bid[i])
-            #log.info(coin_bid_lot[i])
 
             zaif_tradable_ask_lot_total += zaif_ask_lot[i]
             zaif_tradable_bid_lot_total += zaif_bid_lot[i]
@@ -259,13 +216,8 @@ class ZaifCoincheckTrade:
         coin_tradable_ask_price = float(coin_result['asks'][board_count][0])
         coin_tradable_bid_price = float(coin_result['bids'][board_count][0])
 
-        #za_cb_board_count_price = coin_tradable_bid_price - zaif_tradable_ask_price
-        #ca_zb_board_count_price = zaif_tradable_bid_price - coin_tradable_ask_price 
-
         za_cb_board_count_price = zaif_tradable_ask_price - coin_tradable_bid_price
         ca_zb_board_count_price = coin_tradable_ask_price - zaif_tradable_bid_price 
-
-
 
         info = { 
                     'zaif_ask':zaif_ask,
@@ -287,9 +239,6 @@ class ZaifCoincheckTrade:
                     'za_cb_board_count_price':za_cb_board_count_price,
                     'ca_zb_board_count_price':ca_zb_board_count_price,
                 }
-
-
-        #log.critical(info)
 
         return info
 
@@ -316,19 +265,15 @@ class ZaifCoincheckTrade:
             log.critical(board)         
             raise Exception
 
-        #log.critical("TRADE TYPE:" + trade_type)
-        #log.critical("差額:" + str(price_diff))
         return {'trade_type':trade_type,'price_diff':price_diff}
 
 
     def debugWriteBalance(self,balance):
 
-        #log.info(balance)
-
         debug_balance_file = self.conf.get('debug','DEBUG_BALANCE_FILE')
+
         #TESTモードでファイルへ書き込み
         with open(debug_balance_file,"w") as w:
-            #w.writelines([item for item in lines[:-1]])
             json.dump(balance,w)
 
 
@@ -347,7 +292,6 @@ class ZaifCoincheckTrade:
             balance = self.getBlance()
 
         else:
-            #balance_before = self.debugReadBalance()
             balance_before = self.getBalance()
             #zaifで買った価格と数量を出力する。
             zaif_jpy = int(balance_before['zaif_jpy']) - (btc_lot * zaif_ask)
@@ -376,7 +320,6 @@ class ZaifCoincheckTrade:
         log.critical("####################################")
 
         if self.mode == "production":
-
             #Coincheckで買う
             self.coin_api.trade_coin_ask(btc,coin_ask)
             #zaifで売る。
@@ -408,9 +351,6 @@ class ZaifCoincheckTrade:
 
     #スプレッド取引を行う。
     def spreadAction(self,board,board_info):
-
-        #board = self.getBoardInfoWithCount(self.board_count,self.entry_rate)
-        #board_info = self.getTradeType(board)
 
         #実際にトレードする枚数の指定倍が板に入っているか。
         tradable_lot = self.btc_lot * self.entry_rate
@@ -465,7 +405,6 @@ class ZaifCoincheckTrade:
            board['coin_tradable_bid_lot_total'] > tradable_lot and 
            board['zaif_tradable_ask_lot_total'] > tradable_lot):
 
-        #if info['trade_type'] == 'za_cb' and info['price_diff'] > self.reverse_spread:
             self.coin_spread_over_count = 0
             self.zaif_spread_over_count += 1
         else:
@@ -500,8 +439,6 @@ class ZaifCoincheckTrade:
            board['zaif_tradable_bid_lot_total'] > tradable_lot and 
            board['coin_tradable_ask_lot_total'] > tradable_lot):
 
-
-        #if info['trade_type'] == 'ca_zb' and info['price_diff'] > self.reverse_spread:
             self.coin_spread_over_count += 1
             self.zaif_spread_over_count = 0
         else:
@@ -520,16 +457,6 @@ class ZaifCoincheckTrade:
             self.zaif_spread_over_count = 0
             self.coin_spread_over_count = 0
 
-
-    #テストモードの場合、残高をファイルに記録する。
-
-    #メイン処理の前の処理
-        #本番の残高に問題がないか。
-
-
-        #ブローカーが稼働しているか。
-
-    #終了処理
 
     #メイン処理
     def mainProcess(self):
@@ -623,34 +550,6 @@ class ZaifCoincheckTrade:
             log.critical("-----------------------------------------------------------------")
             #指定時間停止する。
             time.sleep(self.interval_second)
-    #-----------------------------------------------------------------------------------------------------------------
-
-
-    #偏り解消取引を行う。
-    #def reverseAction(self,board,board_info):
-
-        #トレード方向を取得する。
-        #balance = self.getBalance()
-
-        #ZaifにBTCが偏っている場合、
-        #if balance['zaif_btc'] > balance['coin_btc']:
-        #    self.reverseToCoincheck(board,board_info)
-
-        #coinchekckにBTCが偏っている場合、
-        #elif balance['coin_btc'] > balance['zaif_btc']:
-        #    self.reverseToZaif(board,board_info)
-
-        #return
-
-
-
-
-
-
-
-
-
-
 
 if __name__ == "__main__":
 
@@ -661,14 +560,3 @@ if __name__ == "__main__":
         log.critical(t)
         slack.Slack.post_message(t)
 
-"""
-
-・板情報を検索して、発注量の10倍の売り板、買い板がある場合だけ、トレードする。
-・価格差1000円程度でトライする。
-・デモモードでBTCと円が増減するかシミュレートする。
-
-・spread_thより既定の金額分低い金額をunspread_thに設定するようにする。
-・板にエントリロット数の10倍の指値があるときのみエントリする。
-・unspread priceとspread priceを修正する。2500固定でよいと思う。
-
-"""
