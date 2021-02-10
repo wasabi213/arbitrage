@@ -114,7 +114,7 @@ class ZaifCoincheckTrade:
 
             balance = { 'zaif_jpy':int(zaif_balance_jpy),
                         'zaif_btc':float(zaif_balance_btc),
-                        'coin_jpy':int(coin_balance_jpy),
+                        'coin_jpy':float(coin_balance_jpy),
                         'coin_btc':float(coin_balance_btc)
                         }
 
