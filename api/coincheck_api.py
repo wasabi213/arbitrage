@@ -71,7 +71,8 @@ class CoincheckApi:
     ###############################################
     @retry(exceptions=(Exception),tries=3,delay=5)
     def coin_get_transactions(self):
-        nonce = int((datetime.datetime.today() - datetime.datetime(2017,1,1)).total_seconds()) * 100
+        #nonce = int((datetime.datetime.today() - datetime.datetime(2021,2,11)).total_seconds()) * 100
+        nonce = self.buildNonce()
 
         c = self.ccPrivateApi("/api/exchange/orders/transactions",nonce)
         r = c.json()
@@ -94,7 +95,8 @@ class CoincheckApi:
     @retry(exceptions=(Exception),tries=3,delay=5)
     def coin_get_balance(self):
         #order_type : market_sell : 成行注文　現物取引　売り
-        nonce = int((datetime.datetime.today() - datetime.datetime(2017,1,1)).total_seconds()) * 100
+        #nonce = int((datetime.datetime.today() - datetime.datetime(2021,2,11)).total_seconds()) * 100
+        nonce = self.buildNonce()
 
         c = self.ccPrivateApi("/api/accounts/balance",nonce)
         r = c.json()
@@ -119,7 +121,9 @@ class CoincheckApi:
     ###################################
     def trade_coin_bid(self,btc):
         #order_type : market_sell : 成行注文　現物取引　売り
-        nonce = int((datetime.datetime.today() - datetime.datetime(2017,1,1)).total_seconds()) * 100
+        #nonce = int((datetime.datetime.today() - datetime.datetime(2021,2,11)).total_seconds()) * 100
+        nonce = self.buildNonce()
+
         c = self.ccPrivateApi("/api/exchange/orders",nonce,
                             {"pair":"btc_jpy",
                             "order_type":"market_sell",
@@ -141,7 +145,9 @@ class CoincheckApi:
         #order_type : market_buy : 成行注文　現物取引　買い
         #買いの成行注文をする場合は、market_buy_amountを指定する必要がある。(JPY)
         #market_buy_amountは日本円で渡す必要があるため、 int(btc * coin_ask)としている。
-        nonce = int((datetime.datetime.today() - datetime.datetime(2017,1,1)).total_seconds()) * 100
+        #nonce = int((datetime.datetime.today() - datetime.datetime(2021,2,11)).total_seconds()) * 100
+        nonce = self.buildNonce()
+
         c = self.ccPrivateApi("/api/exchange/orders",nonce,
                             {"pair":"btc_jpy",
                             "order_type":"market_buy",
@@ -158,7 +164,9 @@ class CoincheckApi:
     #coincheckでbtcを指値で買う関数
     ##############################
     def trade_coin_ask_limit_price(self,btc,coin_ask):
-        nonce = int((datetime.datetime.today() - datetime.datetime(2017,1,1)).total_seconds()) * 100
+        #nonce = int((datetime.datetime.today() - datetime.datetime(2017,1,1)).total_seconds()) * 100
+        nonce = self.buildNonce()
+
         c = self.ccPrivateApi("/api/exchange/orders",nonce,
                             {"pair":"btc_jpy",
                             "order_type":"buy",
@@ -191,6 +199,10 @@ class CoincheckApi:
     def coin_get_balance_btc(self,result):
         return result['btc']
 
+    def buildNonce(self):
+        return int(datetime.datetime.now().strftime('%Y%m%d%H%M%S%f'))-int(datetime.datetime(2021,2,11,0,0,0).strftime('%Y%m%d%H%M%S%f'))
+
+
 
 if __name__ == "__main__":
 
@@ -205,4 +217,5 @@ if __name__ == "__main__":
     #print(api.trade_coin_ask_limit_price(0,0))
     #print(api.coincheck_get_board())
 
-    print(api.coin_get_transactions())
+    #print(api.coin_get_transactions())
+    print(api.buildNonce())
