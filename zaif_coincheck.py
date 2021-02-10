@@ -467,6 +467,7 @@ class ZaifCoincheckTrade:
         #メインループに入る。
         while True:
 
+
             #口座残高を取得して、インスタンスに保持する。
             self.balance = self.getBalance()
             log.critical("##### 残高")
@@ -476,6 +477,12 @@ class ZaifCoincheckTrade:
             log.critical("Coincheck-BTC:" + str(self.balance['coin_btc']))
             log.critical("TOTAL JPY:" + str(self.balance['zaif_jpy'] + self.balance['coin_jpy']))
             log.critical("TOTAL BTC:" + str(self.balance['zaif_btc'] + self.balance['coin_btc']))
+            log.critical("-----------------------------------------------------------------")
+
+            #指定時間停止する。
+            time.sleep(self.interval_second)
+
+
 
             #残高チェックを行う。
             #1度下限に到達したら、もとに戻るまでそのままにする必要があるがこれではだめだと思う。
@@ -557,8 +564,12 @@ class ZaifCoincheckTrade:
             log.critical("CA-ZB:" + str(board['zaif_tradable_bid_price'] - board['coin_tradable_ask_price'] ))
 
             log.critical("-----------------------------------------------------------------")
-            #指定時間停止する。
-            time.sleep(self.interval_second)
+
+
+
+
+
+
 
 if __name__ == "__main__":
 
