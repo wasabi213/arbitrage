@@ -289,7 +289,7 @@ class ZaifCoincheckTrade:
             #coincheckで売る。
             self.coin_api.trade_coin_bid(btc_lot)
             #zaifとコインチェックの残高を取得する。
-            balance = self.getBlance()
+            balance = self.getBalance()
 
         else:
             balance_before = self.getBalance()
@@ -325,7 +325,7 @@ class ZaifCoincheckTrade:
             #zaifで売る。
             self.zaif_api.trade_zaif_bid(btc,zaif_bid)
             #zaifとコインチェックの残高を取得する。
-            balance = self.getBlance()
+            balance = self.getBalance()
 
         else:
             balance_before = self.getBalance()

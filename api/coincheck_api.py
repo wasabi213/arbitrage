@@ -65,6 +65,29 @@ class CoincheckApi:
 
         return requests.post(API_URL+i_path, data=body, headers=headers)
 
+
+    ###############################################
+    #取引履歴の取得
+    ###############################################
+    @retry(exceptions=(Exception),tries=3,delay=5)
+    def coin_get_transactions(self):
+        nonce = int((datetime.datetime.today() - datetime.datetime(2017,1,1)).total_seconds()) * 100
+
+        c = self.ccPrivateApi("/api/exchange/orders/transactions",nonce)
+        r = c.json()
+
+        if r['success'] != True:
+            error_message = r['error']
+            msg = str(datetime.datetime.now()) + ',ccerror,'+ str(error_message) + '\n'
+            log.error(msg)
+        else:
+            #brker 
+            log.tradelog(r)
+
+        return r
+
+
+
     ###############################################
     #残高の取得
     ###############################################
@@ -175,9 +198,11 @@ if __name__ == "__main__":
 
     api = CoincheckApi()
 
-    print(api.coin_get_balance())
-    print(api.coin_get_ticker())
-    print(api.trade_coin_bid(0))
-    print(api.trade_coin_ask(0,0))
-    print(api.trade_coin_ask_limit_price(0,0))
-    print(api.coincheck_get_board())
+    #print(api.coin_get_balance())
+    #print(api.coin_get_ticker())
+    #print(api.trade_coin_bid(0))
+    #print(api.trade_coin_ask(0,0))
+    #print(api.trade_coin_ask_limit_price(0,0))
+    #print(api.coincheck_get_board())
+
+    print(api.coin_get_transactions())

@@ -51,20 +51,18 @@ class Logger:
 			self.logger.addHandler(console_handler)
 
 		#　report log
-		if inifile.getboolean('system','report_log') == True:
+		if inifile.getboolean('system','trade_log') == True:
 			#レポートログ用ハンドラ設定
-			self.report_log_path = inifile.get('system','report_log_path')
-			self.report_logger = getLogger('report')
-			self.report_logger.setLevel(self.system_log_level)
+			self.trade_log_path = inifile.get('system','trade_log_path')
+			self.trade_logger = getLogger('trade')
+			self.trade_logger.setLevel(self.system_log_level)
 
-			report_handler = logging.handlers.TimedRotatingFileHandler(filename=self.report_log_path,when='W0',backupCount=10)
-			report_handler.setLevel(self.system_log_level)
-			report_file_formatter = Formatter("%(asctime)s %(message)s")
-			report_handler.setFormatter(report_file_formatter)
-			self.report_logger.addHandler(report_handler)
-
-
-
+			#trade_handler = logging.handlers.FileHandler(filename=self.trade_log_path)
+			trade_handler = logging.FileHandler(filename=self.trade_log_path)
+			trade_handler.setLevel(self.system_log_level)
+			trade_file_formatter = Formatter("%(asctime)s %(message)s")
+			trade_handler.setFormatter(trade_file_formatter)
+			self.trade_logger.addHandler(trade_handler)
 
 	def debug(self, msg):
 		self.logger.debug(self.getCallerInfo() + msg)
@@ -112,8 +110,8 @@ class Logger:
 		lineo = inspect.stack()[2].lineno
 		return str(fn) + ":" + str(func) + ":" + str(lineo) + "\t"
 
-	def report(self,msg1,msg2,msg3,msg4,msg5,msg6):
-		self.report_logger.critical(str(msg1) + ',' + str(msg2) + ',' + str(msg3) + ',' + str(msg4) + ',' + str(msg5) + ',' + str(msg6))
+	def tradelog(self,msg1):
+		self.trade_logger.critical(str(msg1))
 
 
 

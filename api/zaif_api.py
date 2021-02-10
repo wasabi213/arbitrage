@@ -9,14 +9,16 @@ import csv
 import configparser
 import codecs
 from retry import retry
-#from .logger import Logger
-
-
 from zaifapi import ZaifPublicApi,ZaifTradeApi
 
-CONFIG_FILE = '../config/zaif_coincheck_config.ini'
+import pathlib
+current_dir = pathlib.Path(__file__).resolve().parent
+sys.path.append( str(current_dir) + '/../' )
+from common.logger import Logger
 
-#log = Logger(__name__)
+CONFIG_FILE = '../config/zaif_coincheck_config.ini'
+#log = logger.Logger(__name__)
+log = Logger(__name__)
 
 class ZaifApi:
 
@@ -50,6 +52,19 @@ class ZaifApi:
         action = 'bid', #zaifでは「bid」が「買い」になる
         amount = btc,
         price = int((zaif_ask + 10000) / 10) * 10)
+
+    ################################
+    #残高情報を取得する。
+    ################################
+    @retry(exceptions=(Exception),tries=3,delay=5)
+    def zaif_trade_history(self):
+        zaif = ZaifTradeApi(self.API_KEY,self.API_SECRET_KEY)
+        history = zaif.trade_history(count=1)
+
+        print(history)
+        log.tradelog(history)
+
+        return history
 
     ################################
     #残高情報を取得する。
@@ -94,6 +109,8 @@ if __name__ == "__main__":
 
     #api.trade_zaif_bid(0,0)
 
-    print(api.zaif_get_info2())
-    print(api.zaif_get_board())
+    #print(api.zaif_get_info2())
+    #print(api.zaif_get_board())
 
+
+    api.zaif_trade_history()
