@@ -201,8 +201,14 @@ class CoincheckApi:
 
     def buildNonce(self):
 
-        nonce = int(datetime.datetime.now().strftime('%Y%m%d%H%M%S%f'))-int(datetime.datetime(2021,2,11,0,0,0).strftime('%Y%m%d%H%M%S%f'))
+        #nonce = int(datetime.datetime.now().strftime('%Y%m%d%H%M%S%f'))-int(datetime.datetime(2021,2,11,0,0,0).strftime('%Y%m%d%H%M%S%f'))
+        #log.error(nonce)
+        now = datetime.datetime.now()
+        now_ts = now.timestamp()
+        nonce = int(now_ts * 1000000)
+
         log.error(nonce)
+
 
         return nonce
 
