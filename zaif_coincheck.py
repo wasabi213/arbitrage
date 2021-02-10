@@ -321,9 +321,9 @@ class ZaifCoincheckTrade:
 
         if self.mode == "production":
             #Coincheckで買う
-            self.coin_api.trade_coin_ask(btc,coin_ask)
+            self.coin_api.trade_coin_ask(btc_lot,coin_ask)
             #zaifで売る。
-            self.zaif_api.trade_zaif_bid(btc,zaif_bid)
+            self.zaif_api.trade_zaif_bid(btc_lot,zaif_bid)
             #zaifとコインチェックの残高を取得する。
             balance = self.getBalance()
 
