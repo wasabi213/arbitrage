@@ -102,6 +102,8 @@ class ZaifCoincheckTrade:
     #zaifとcoinncheckの残高を取得する。
     def getBalance(self):
 
+        time.sleep(1)
+
         balance = {}
         if self.mode == 'production':
             zaif_balance_info = self.zaif_api.zaif_get_info2()

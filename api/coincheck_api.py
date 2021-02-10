@@ -200,8 +200,11 @@ class CoincheckApi:
         return result['btc']
 
     def buildNonce(self):
-        return int(datetime.datetime.now().strftime('%Y%m%d%H%M%S%f'))-int(datetime.datetime(2021,2,11,0,0,0).strftime('%Y%m%d%H%M%S%f'))
 
+        nonce = int(datetime.datetime.now().strftime('%Y%m%d%H%M%S%f'))-int(datetime.datetime(2021,2,11,0,0,0).strftime('%Y%m%d%H%M%S%f'))
+        log.error(nonce)
+
+        return nonce
 
 
 if __name__ == "__main__":
