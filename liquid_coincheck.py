@@ -1,284 +1,396 @@
 # coding:utf-8
-####import設定####
+
+# ###import設定###
+import os
+import pathlib
+import traceback
 import datetime
+import hashlib
+import hmac
 import requests
+import json
 import time
 import sys
-import hmac
-import hashlib
-import json
 import csv
-import ccxt
-####初期設定値####
-#api設定
-coin_access_key = '' #ｺｲﾝﾁｪｯｸのAPIｱｸｾｽｷｰ
-coin_secret_key = '' #ｺｲﾝﾁｪｯｸのAPIｼｰｸﾚｯﾄｷｰ
-quoinex = ccxt.quoinex({'apiKey': '','secret': '',})
-#log出力先設定
-trade_log_path = r'' #取引実施状況を出力するログファイル。リトライ時ログ確認するため、必須
-#初期値
-btc = 0.1 #取引量設定（0.006以上推奨※最低取引量は0.005）
-freq = 5 #繰り返し周期[sec]
-spread_Th = 3000 #「差が十分広がっている」とみなすしきい値
-unspread_Th = 0 #「差が十分閉じている」とみなすしきい値
-spread_count_Th = 2 #このしきい値以上の回数spread_Thを満たせば取引実施
-unspread_count_Th = 2 #このしきい値以上の回数unspread_Thを満たせば逆取引実施
-retry_count_Th = 100 #サーバ接続エラーなどでプログラムが停止したとき、このしきい値の回数リトライ実施
-retry_freq = 5  #リトライ実施時のwait time[sec]
-####関数####
-##coincheck関係
-#coincheckのtickerを取得する関数(publicApiを使用)
-def coin_get_ticker():
-   url = 'https://coincheck.jp/api/ticker'
-   return requests.get(url).text
-#coincheckのPrivateAPIﾘｸｴｽﾄ送信関数
-def ccPrivateApi(i_path, i_nonce, i_params=None, i_method="get"):
- API_URL="https://coincheck.com"
- headers={'ACCESS-KEY':coin_access_key, 
-          'ACCESS-NONCE':str(i_nonce), 
-          'Content-Type': 'application/json'}
- s = hmac.new(bytearray(coin_secret_key.encode('utf-8')), digestmod=hashlib.sha256)
- 
- if i_params is None:
-   w = str(i_nonce) + API_URL + i_path
-   s.update(w.encode('utf-8'))
-   headers['ACCESS-SIGNATURE'] = s.hexdigest()
-   if i_method == "delete":
-     return requests.delete(API_URL+i_path, headers=headers)
-   else:
-     return requests.get(API_URL+i_path, headers=headers)
- else:    
-   body = json.dumps(i_params);
-   w = str(i_nonce) + API_URL + i_path + body
-   s.update(w.encode('utf-8'))
-   headers['ACCESS-SIGNATURE'] = s.hexdigest()
-   return requests.post(API_URL+i_path, data=body, headers=headers)
-#coincheckでbtc分のBitcoinを売る関数
-def trade_coin_bid(btc):
-    #order_type : market_sell : 成行注文　現物取引　売り
-   nonce = int((datetime.datetime.today() - datetime.datetime(2017,1,1)).total_seconds()) * 100
-   c = ccPrivateApi("/api/exchange/orders",nonce,
-                    {"pair":"btc_jpy",
-                     "order_type":"market_sell",
-                     "amount":btc})
-   r = c.json()
-   return r
-#coincheckでbtc分のBitcoinを買う関数
-def trade_coin_ask(btc,coin_ask):
-    #order_type : market_buy : 成行注文　現物取引　買い
-   #買いの成行注文をする場合は、円（JPY）でのmarket_buy_amountの指定必須
-   nonce = int((datetime.datetime.today() - datetime.datetime(2017,1,1)).total_seconds()) * 100
-   c = ccPrivateApi("/api/exchange/orders",nonce,
-                    {"pair":"btc_jpy",
-                     "order_type":"market_buy",
-                     "market_buy_amount":int(btc*coin_ask)})
-   r = c.json()
-   return r
-##quoinex関係
-#quoinexのtickerを取得する関数 
-def qe_get_ticker():
-   quoinex = ccxt.quoinex()
-   ticker = quoinex.fetch_ticker('BTC/JPY')
-   return ticker
-#quoinexでsize分のBitcoinを売る関数
-def trade_quoinex_bid(size):
-   result = quoinex.create_order('BTC/JPY', type='market', side='sell', amount=size)
-   return result
-#quoinexでsize分のBitcoinを買う関数
-def trade_quoinex_ask(size):
-   result = quoinex.create_order('BTC/JPY', type='market', side='buy', amount=size)
-   return result
-##Log関係
-#log出力用関数
-def log_output(output_path,msg):
-   f = open(output_path,"a",encoding = "UTF-8")
-   f.write(msg)
-   f.close()
-   
-#log入力用関数
-def logreader(trade_log_path):
-    #ログファイルの最終行から最後に実施した取引を確認する    f = open(trade_log_path,'r')
-   reader = csv.reader(f)
-   f.close
-   for row in reader:
-       lastrow = row
-   last_trade_status = lastrow[1]
-   last_trade_type = lastrow[11]
-  
-   if last_trade_status == 'unspread':
-        #spread待ち状態        flag = 0
-   else:
-        #last_trade_status = 'spread'
-        #unspread待ち状態        if last_trade_type == 'ca_qb':
-           #spread時:coin_ask , Quoinex_bid
-            #この逆取引待ち状態からスタートさせる            flag = 1
-       if last_trade_type == 'qa_cb':
-           #spread時:coin_bid , Quoinex_ask
-            #この逆取引待ち状態からスタートさせる            flag = 2
-   return(flag)
-####Programスタート####
-#初期化
-flag = logreader(trade_log_path) #前回終了時の取引状況の確認
-spread_count = 0
-unspread_count = 0
-print('flag:'+str(flag))
-#初期値の表示
-print('設定取引量：'+ str(btc) + 'btc')
-print('繰り返し周期：'+ str(freq) + 'sec')
-print('リトライ繰り返し周期：'+ str(retry_freq) + 'sec')
-print('spreadしきい値：'+str(spread_Th)+ 'yen')
-print('unspreadしきい値：'+str(unspread_Th)+ 'yen')
-print('spreadカウントしきい値:'+str(spread_count_Th)+'回')
-print('unspreadカウントしきい値:'+str(unspread_count_Th)+'回')
-print('リトライカウントしきい値:'+str(retry_count_Th)+'回')
-print('ArbitrageProgram を開始します : '+str(datetime.datetime.now()))
-#以下繰り返し
-while True:
-    #coincheck_ticker取得    for i in range(retry_count_Th):
-       try:
-           coin_data_dict = json.loads(coin_get_ticker())
-       except:
-           print('coin_Error:ticker_待機します。 '+str(i)+'回目')
-           time.sleep(retry_freq)
-       else:
-           break
-   else:
-       print('リトライが全て失敗しました。プログラムを停止します。')
-       sys.exit()
-   #quoinex_ticker取得
-   for i in range(retry_count_Th):
-       try:
-           qe_data_dict = qe_get_ticker()
-       except:
-           print('quoinex_Error:ticker_待機します。 '+str(i)+'回目')
-           time.sleep(retry_freq)
-       else:
-           break
-   else:
-       print('リトライが全て失敗しました。プログラムを停止します。')
-       sys.exit()
-   #取得したtickerからbid,ask値を読み取る
-   coin_bid = coin_data_dict['bid']
-   coin_ask = coin_data_dict['ask']
-   qe_bid = qe_data_dict['bid']
-   qe_ask = qe_data_dict['ask']
-   
-   #bid値、ask値から損益を計算する
-   ca_qb = qe_bid - coin_ask #coincheckで買ってquoinexで売る
-   qa_cb = coin_bid - qe_ask #quoinexで買ってcoincheckで売る
-   
-   if flag ==0:
-       status = 'spread待ち'
-   else:
-       status = 'unspread待ち'
-       
-   print(str(datetime.datetime.now())+' '+status+' ca_qb:'+str(round(ca_qb,3))+' qa_cb:'+str(round(qa_cb,3)))
-   
-    #Check & Trade
-   if flag == 0:
-       if ca_qb > qa_cb:
-           Trade_Type = 'ca_qb'
-           Trade_result = ca_qb
-       else:
-           Trade_Type = 'qa_cb'
-           Trade_result = qa_cb
-           
-       if Trade_Type == 'ca_qb':
-           if ca_qb > spread_Th:
-               spread_count = spread_count + 1
-               if spread_count >= spread_count_Th:
-                   flag = 1
-                   spread_count = 0
-           else:
-               spread_count = 0
-       else:
-           if qa_cb > spread_Th:
-               spread_count = spread_count + 1
-               if spread_count >= spread_count_Th:
-                   flag = 2
-                   spread_count = 0
-           else:
-               spread_count = 0
-               
-       if flag == 0:
-           pass
-       elif flag == 1 or 2:
-           #spread:取引実施
-           if flag == 1:
-                #coincheck_ask , quoinex_bid
-               try:
-                   qe_trade = trade_quoinex_bid(btc)
-                   coin_trade = trade_coin_ask(btc,coin_ask)
-                   print('spread動作実施 : '+str(datetime.datetime.now())+' coin_ask - quoinex_bid : '+str(ca_qb)+' JPY' )
-               except:
-                   print('spread動作エラー')
-                   print(qe_trade)
-                   print(coin_trade)
+import configparser
+import codecs
+import importlib
+from common import spreadlog, slack
+from common.logger import Logger
 
-                   sys.exit()
-               
-           elif flag ==2:
-               #quoinex_ask , coincheck_bid
-               try:
-                   qe_trade = trade_quoinex_ask(btc)
-                   coin_trade = trade_coin_bid(btc)
-                   print('spread動作実施 : '+str(datetime.datetime.now())+' quoinex_ask - coin_bid : '+str(qa_cb)+' JPY' )
-               except:
-                    print('spread動作エラー')
-                    print(qe_trade)
-                    print(coin_trade)
-                    sys.exit()
-               
-           msg = str(datetime.datetime.now()) + ',spread,qe_bid,'+ str(qe_bid) + ',qe_ask,'+ str(qe_ask) + ',coin_bid,' + str(coin_bid) + ',coin_ask,' + str(coin_ask) + ',Trade_Type,' + str(Trade_Type) + ',Trade_result,' + str(Trade_result) + '\n'
-           log_output(trade_log_path,msg)
-   else:
-       if flag == 1:
-           #spread時動作:coin_ask , quoinex_bidの場合
-           if qa_cb > unspread_Th:
-               unspread_count = unspread_count + 1
-               if unspread_count >= unspread_count_Th:
-                   flag = 3
-                   Trade_Type = 'qa_cb'
-                   Trade_result = qa_cb
-                   unspread_count = 0
-           else:
-               unspread_count = 0
-       if flag ==2:
-           #spread時動作:quoinex_ask , coin_bidの場合
-           if ca_qb > unspread_Th:
-               unspread_count = unspread_count + 1
-               if unspread_count >= unspread_count_Th:
-                   flag = 3
-                   Trade_Type = 'ca_qb'
-                   Trade_result = ca_qb
-                   unspread_count = 0
-           else:
-               unspread_count = 0
-   if flag == 3:
-        #unspread時動作        if Trade_Type == 'ca_qb':
-           try:
-               qe_trade = trade_quoinex_bid(btc)
-               coin_trade = trade_coin_ask(btc,coin_ask)
-               print('unspread動作実施 : '+str(datetime.datetime.now())+' coin_ask - quoinex_bid : '+str(ca_qb)+' JPY' )
-           except:
-               print('unspread動作エラー')
-               print(qe_trade)
-               print(coin_trade)
-               sys.exit()
-       
-       elif Trade_Type == 'qa_cb':
-           try:
-               qe_trade = trade_quoinex_ask(btc)
-               coin_trade = trade_coin_bid(btc)
-               print('unspread動作実施 : '+str(datetime.datetime.now())+' quoinex_ask - coin_bid : '+str(qa_cb)+' JPY' )
-           except:
-               print('unspread動作エラー')
-               print(qe_trade)
-               print(coin_trade)
-               sys.exit()
-        
-       msg = str(datetime.datetime.now()) + ',unspread,qe_bid,'+ str(qe_bid) + ',qe_ask,'+ str(qe_ask) + ',coin_bid,' + str(coin_bid) + ',coin_ask,' + str(coin_ask) + ',Trade_Type,' + str(Trade_Type) + ',Trade_result,' + str(Trade_result) + '\n'
-       log_output(trade_log_path,msg)
-       flag =0
-       
-   time.sleep(freq)
+from api import liquid_api,coincheck_api2
+
+CONFIG_FILE = '../config/arbitrage_config.ini'
+CONF = configparser.ConfigParser() 
+CONF.read_file(codecs.open(CONFIG_FILE, "r", "utf8"))
+LOG_PATH = CONF.get('path', 'trade_log_path') 
+log = Logger(__name__)
+
+# BROKER_A = 'liquid'
+# BROKER_B = 'coincheck'
+
+
+class BrokerArbiTrage:
+
+    def __init__(self, broker_a, broker_b):
+
+        self.PRIMARY_BROKER = broker_a
+        self.SECONDARY_BROKER = broker_b
+
+        # --------------------------------------------------------------------
+        # 動作モード
+        self.mode = CONF.get('env', 'mode')
+
+        # 初期円残高
+        self.initial_yen_amount = CONF.getint('trade','initial_yen_amount')
+        # 初期BTC残高
+        self.initial_btc_amount = CONF.getfloat('trade','initial_btc_amount')
+
+        # 日本円の最小限度額
+        self.minimum_yen_limit = CONF.getint('trade','minimum_yen_limit')
+        # BTCの最小限度額
+        self.minimum_btc_limit = CONF.getfloat('trade','minimum_btc_limit')
+
+        # １度にエントリするBTCの枚数
+        self.btc_lot = CONF.getfloat('trade','btc_lot')
+
+        # エントリするときのスプレッド
+        self.entry_spread = CONF.getint('trade','entry_spread')
+        # リバースするときのスプレッド
+        self.reverse_spread = CONF.getint('trade','reverse_spread')
+
+        # 何枚目の板まで読むか。（枚数で指定）
+        self.board_count = CONF.getint('trade','board_count')
+
+        # エントリロットするに対する指値に入っているロットの倍率
+        self.entry_rate = CONF.getint('trade','entry_rate')
+
+        # スプレッドが何回連続で閾値を超えたらエントリするか。
+        self.price_over_count = CONF.getint('trade','price_over_count')
+
+        # 何秒ごとに処理を行うか。（秒）
+        self.interval_second = CONF.getint('trade','interval_second')
+
+
+        # スプレッドモードで動作しているか、リバースモードで動作しているか。
+        self.action_mode = ''
+        # primaryのスプレッドがしきい値を超えた回数
+        self.primary_tradable_time = 0
+        # secondarycheckのスプレッドがしきい値を超えた回数
+        self.secondary_tradable_time = 0
+
+        # 価格が変わらずに取引が成立するための十分なロット数
+        self.tradable_lot = self.btc_lot * self.entry_rate
+
+        # どちらのブローカーにBTCを戻すか。
+        self.reverse_broker = ''
+
+        # ブローカーAPIのインスタンスを保持する。
+        #self.primary = self.setAPI(self.PRIMARY_BROKER)
+        #self.secondary = self.setAPI(self.SECONDARY_BROKER)
+
+        self.primary = liquid_api.LiquidApi()
+        self.secondary = coincheck_api2.CoincheckApi()
+
+        # ループ一回ごとに一度のみ取得にする。
+        #self.balance = self.updateBalance()
+        self.balance = {}
+    
+
+    # APIライブラリを動的にセットする。
+    def setAPI(self, broker):
+        api_dir = "api"
+        api_files = os.listdir(api_dir)
+        #current_dir = os.path.dirname(os.path.abspath(__file__))
+
+        for api_py in api_files:
+            if api_py.endswith('.py'):
+                path = api_dir + "/" + api_py
+
+                if api_py.split(".")[0] == broker:
+                    cpath = os.path.splitext(path)[0].replace(os.path.sep, '.') 
+                    mod = importlib.import_module(cpath)
+
+                    return mod()
+
+    # 最新JPY,BTCの残高を取得する。
+    def updateBalance(self):
+
+        p_balance   = self.primary.getBalance()
+        primary_jpy = self.primary.getBalanceJpy(p_balance)
+        primary_btc = self.primary.getBalanceBtc(p_balance)
+
+        s_balance     = self.secondary.getBalance()
+        secondary_jpy = self.secondary.getBalanceJpy(s_balance)
+        secondary_btc = self.secondary.getBalanceBtc(s_balance)
+
+        balance = {
+                    'primary_jpy'  :float(primary_jpy),
+                    'primary_btc'  :float(primary_btc),
+                    'secondary_jpy':float(secondary_jpy),
+                    'secondary_btc':float(secondary_btc)
+                  }
+
+        self.balance = balance
+
+
+    def getBalance(self):
+        return self.balance
+
+    #円残高、BTC残高が十分にあるかチェックする。
+    def checkBalance(self,balance):
+
+        #状態
+        if balance['primary_jpy'] + balance['secondary_jpy'] < self.initial_yen_amount:
+            log.error("円残高が偏っています。")
+            slack.Slack.post_message("円残高が偏っています。")
+
+        if balance['primary_btc'] + balance['secondary_btc'] < self.initial_btc_amount:
+            log.error("BTC残高が偏っています。")
+            slack.Slack.post_message("円残高が偏っています。")
+
+        if float(balance['primary_jpy']) <= float(self.minimum_yen_limit):
+            log.critical(self.PRIMARY_BROKER + 'の円残高が下限に達しました。')
+            direction = "reverse"
+            primary_trade_type = "sell"
+            secondary_trade_type = "buy"
+
+        elif float(balance['primary_btc']) <= float(self.minimum_btc_limit):
+            log.critical(self.PRIMARY_BROKER + 'のBTC残高が下限に達しました。')
+            direction = "reverse"
+            primary_trade_type = "buy"
+            secondary_trade_type = "sell"
+
+        elif float(balance['secondary_jpy']) <= float(self.minimum_yen_limit):
+            log.critical(self.SECONDARY_BROKER + 'の円残高が下限に達しました。')
+            direction = "reverse"
+            primary_trade_type = "buy"
+            secondary_trade_type = "sell"
+
+        elif float(balance['secondary_btc']) <= float(self.minimum_btc_limit):
+            log.critical(self.SECONDARY_BROKER + 'のBTC残高が下限に達しました。')
+            direction = "reverse"
+            primary_trade_type = "sell"
+            secondary_trade_type = "buy"
+
+        else:
+            direction = "forward"
+            primary_trade_type = ''
+            secondary_trade_type = ''
+
+        info = {
+                    "direction":direction,
+                    "primary"  :primary_trade_type,
+                    "secondary":secondary_trade_type
+                }
+
+        return info
+
+    #####################################################
+    #トレードを確実にするために、事前にした枚数の板の合計を取得する。
+    #板の合計のロット数が、事前にしたロット数の事前に指定した倍数を超えている場合、トレードするようにする。
+    #両方のブローカーの板情報を取得する。
+    #両サイドのブローカの板情報を取得する。
+    #####################################################
+    def getTradableInfo(self,board,board_count):
+
+        ask_lot = [0] * board_count
+        bid_lot = [0] * board_count
+
+        tradable_ask_lot = 0
+        tradable_bid_lot = 0
+
+        #board_countまでの板の枚数を安全率と考えて合計を算出する。
+        for i in range(board_count):
+            ask_lot[i] = float(board['asks'][i][1])
+            bid_lot[i] = float(board['bids'][i][1])
+
+            tradable_ask_lot += ask_lot[i]
+            tradable_bid_lot += bid_lot[i]
+
+        info = {}
+        info['tradable_ask_lot'] = tradable_ask_lot 
+        info['tradable_bid_lot'] = tradable_bid_lot 
+        info['tradable_ask'] = float(board['asks'][board_count][0])
+        info['tradable_bid'] = float(board['bids'][board_count][0])
+
+        return info
+
+    #主ブローカーで買い、副ブローカーで売り
+    def primaryBuySecondarySell(self,lot,p_ask,s_bid):
+
+        log.critical("####################################################")
+        log.critical(self.PRIMARY_BROKER + ":買い " + self.SECONDARY_BROKER + ":売り")
+        log.critical("####################################################")
+
+        if self.mode == "production":
+            #primaryで買う。
+            self.primary.marketAsk(lot,p_ask)
+            #secondarycheckで売る。
+            self.secondary.marketBid(lot,s_bid)
+
+    #主ブローカーで売り、副ブローカーで買い
+    def primarySellSecondaryBuy(self,lot,s_ask,p_bid):
+
+        log.critical("####################################################")
+        log.critical(self.PRIMARY_BROKER + ":売り " + self.SECONDARY_BROKER + ":買い")
+        log.critical("####################################################")
+
+        if self.mode == "production":
+            #secondaryで買う。
+            self.secondary.marketAsk(lot,s_ask)
+            #primaryで売る。
+            self.primary.marketBid(lot,p_bid)
+           
+    #フォワードトレードが可能な状態の発生回数をカウントする。
+    def countForwardTradableTime(self,p_info,s_info):
+        self.countTradableTime(self.entry_spread,p_info,s_info)
+
+    #リバーストレードが可能な状態の発生回数をカウントする。
+    def countReverseTradableTime(self,p_info,s_info):
+        self.countTradableTime(self.reverse_spread,p_info,s_info)
+
+    #価格とロットがトレード可能なしきい値を超えた回数をカウントする。
+    def countTradableTime(self,spread,p_info,s_info):
+
+        if( p_info['tradable_bid'] > s_info['tradable_ask'] and
+            p_info['tradable_bid'] - s_info['tradable_ask'] > spread and
+            p_info['tradable_bid_lot'] > self.tradable_lot and
+            s_info['tradable_ask_lot'] > self.tradable_lot ):
+
+            self.primary_tradable_time += 1
+            self.secondary_tradable_time = 0
+
+        elif(   s_info['tradable_bid'] > p_info['tradable_ask'] and
+                s_info['tradable_bid'] - p_info['tradable_ask'] > spread and
+                s_info['tradable_bid_lot'] > self.tradable_lot and
+                p_info['tradable_ask_lot'] > self.tradable_lot ):
+
+            self.primary_tradable_time = 0
+            self.secondary_tradable_time += 1
+
+        else:
+            self.primary_tradable_time = 0
+            self.secondary_tradable_time = 0
+
+    #通常方向のトレードを行う。
+    def forwardTrade(self,p_info,s_info):
+ 
+        log.critical("##### Action Mode:FORWARD")
+
+        if self.primary_tradable_time >= self.price_over_count:
+
+            self.primaryBuySecondarySell(self.btc_lot,p_info['tradable_ask'],s_info['tradable_bid'])
+            self.primary_tradable_time = 0
+            self.secondary_tradable_time = 0
+            
+        elif self.secondary_tradable_time >= self.price_over_count:
+
+            self.primarySellSecondaryBuy(self.btc_lot,p_info['tradable_bid'],s_info['tradable_ask'])
+            self.primary_tradable_time = 0
+            self.secondary_tradable_time = 0
+
+        return
+
+    #リバース方向へのトレードを行う。
+    def reverseTrade(self,status,p_info,s_info):
+
+        log.critical("##### Action Mode:REVERSE")
+
+        if status['primary'] == 'buy' and status['secondary'] == 'sell':
+            self.primaryBuySecondarySell(self.btc_lot,p_info['tradable_ask'],s_info['tradable_bid'])
+            self.primary_tradable_time = 0
+            self.secondary_tradable_time = 0
+
+        elif status['primary'] == 'sell' and status['secondary'] == 'buy':
+            self.primarySellSecondaryBuy(self.btc_lot,p_info['tradable_bid'],s_info['tradable_ask'])
+            self.primary_tradable_time = 0
+            self.secondary_tradable_time = 0
+
+        return
+
+    def showConsoleLog(self,balance,p_info,s_info,pt_info,st_info):
+        log.critical("##### 残高")
+        log.critical(self.PRIMARY_BROKER   + ":" + str(balance['primary_jpy']))
+        log.critical(self.SECONDARY_BROKER + ":" + str(balance['secondary_jpy']))
+        log.critical(self.PRIMARY_BROKER   + "-BTC:" + str(balance['primary_btc']))
+        log.critical(self.SECONDARY_BROKER + "-BTC:" + str(balance['secondary_btc']))
+        log.critical("TOTAL JPY:" + str(balance['primary_jpy'] + balance['secondary_jpy']))
+        log.critical("TOTAL BTC:" + str(balance['primary_btc'] + balance['secondary_btc']))
+        log.critical("-----------------------------------------------------------------")
+
+        log.critical("-------------------- Price")
+        log.critical(self.PRIMARY_BROKER   + ":Ask " + str(p_info['asks'][0]))
+        log.critical(self.PRIMARY_BROKER +   ":Bid " + str(p_info['bids'][0]))
+        log.critical(self.SECONDARY_BROKER + ":Ask " + str(s_info['asks'][0]))
+        log.critical(self.SECONDARY_BROKER + ":Bid " + str(s_info['bids'][0]))
+
+        log.critical("-------------------- Best Price Difference")
+        log.critical(self.PRIMARY_BROKER   + ":bid-" + self.SECONDARY_BROKER + ":ask " + str(float(p_info['bids'][0][0]) - float(s_info['asks'][0][0])))
+        log.critical(self.SECONDARY_BROKER + ":bid-" + self.PRIMARY_BROKER   + ":ask " + str(float(s_info['bids'][0][0]) - float(p_info['asks'][0][0])))
+        log.critical("-------------------- Tradable Price Difference")
+        log.critical(self.PRIMARY_BROKER   + ":bid-" + self.SECONDARY_BROKER + ":ask " + str(float(pt_info['tradable_bid']) - float(st_info['tradable_ask'])))
+        log.critical(self.SECONDARY_BROKER + ":bid-" + self.PRIMARY_BROKER   + ":ask " + str(float(st_info['tradable_bid']) - float(pt_info['tradable_ask'])))
+
+        log.critical("-----------------------------------------------------------------")
+
+    #メイン処理
+    def mainProcess(self):
+
+        #メインループに入る。
+        while True:
+
+            #残高情報を更新する。
+            self.updateBalance()
+
+            #口座残高を取得して、インスタンスに保持する。
+            self.balance = self.getBalance()
+
+            #残高状態をチェックしてトレード方向を取得する。
+            trade_status = self.checkBalance(self.balance) 
+            self.action_mode = trade_status['direction']
+
+            #板情報を取得する。
+            primary_info   = self.primary.getBoard()
+            secondary_info = self.secondary.getBoard()
+
+            #トレード可能なロット数と価格を取得する。
+            primary_tradable_info   = self.getTradableInfo(primary_info,self.board_count)
+            secondary_tradable_info = self.getTradableInfo(secondary_info,self.board_count)
+
+            #forwardモードに入る。
+            if self.action_mode == 'forward':
+                log.critical("##### Action Mode:SPREAD")
+
+                #トレード可能な状態になっている回数をカウントしてプロパティに設定する。
+                self.countForwardTradableTime(primary_tradable_info,secondary_tradable_info)
+
+                #通常方向へのトレードを行う。
+                self.forwardTrade(primary_tradable_info,secondary_tradable_info)
+
+
+            #JPY残高または、BTC残高が足りない場合は、リバースモード（偏り解消モード）に入る。
+            else:
+                log.critical("##### Action Mode:REVERSE")
+
+                #トレード可能な状態になっている回数をカウントしてプロパティに設定する。
+                self.countReverseTradableTime(primary_tradable_info,secondary_tradable_info)
+
+                #リバース方向へのトレードを行う。
+                self.reverseTrade(trade_status,primary_tradable_info,secondary_tradable_info)
+
+            self.showConsoleLog(self.balance,primary_info,secondary_info,primary_tradable_info,secondary_tradable_info)
+
+            #指定時間停止する。
+            time.sleep(self.interval_second)
+
+
+if __name__ == "__main__":
+
+    try:      
+        BrokerArbiTrage('liquid','coincheck').mainProcess()
+    except Exception as e:
+        t = traceback.format_exc()
+        log.critical(t)
+        slack.Slack.post_message(t)
+

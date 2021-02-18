@@ -478,12 +478,21 @@ class ZaifCoincheckTrade:
             log.critical("     Zaif-BTC:" + str(self.balance['zaif_btc']))
             log.critical("Coincheck-BTC:" + str(self.balance['coin_btc']))
             log.critical("TOTAL JPY:" + str(self.balance['zaif_jpy'] + self.balance['coin_jpy']))
-            log.critical("TOTAL BTC:" + str(self.balance['zaif_btc'] + self.balance['coin_btc']))
+
+            total_btc = self.balance['zaif_btc'] + self.balance['coin_btc']
+            log.critical("TOTAL BTC:" + str(total_btc))
+
+            if total_btc < self.btc_start_amount * 0.99 or total_btc > self.btc_start_amount *1.01:
+                log.critical("####################################################")
+                log.critical("## 不整合が発生したのでBTC残高を確認してください。##")
+                log.critical("####################################################")
+                log.critical("        現在のBTC残高:" + str(total_btc))
+                log.critical("スタート時ののBTC残高:" + str(self.btc_start_amount))
+
             log.critical("-----------------------------------------------------------------")
 
             #指定時間停止する。
             time.sleep(self.interval_second)
-
 
 
             #残高チェックを行う。
