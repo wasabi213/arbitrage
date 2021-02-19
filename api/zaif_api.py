@@ -36,6 +36,7 @@ class ZaifApi:
     ##################################
     #zaifでbtc分だけのBitcoinを売る関数
     ##################################
+    @retry(exceptions=(Exception),tries=3,delay=1)
     def trade_zaif_bid(self,btc,zaif_bid):
         zaif = ZaifTradeApi(self.API_KEY,self.API_SECRET_KEY)
         zaif.trade(currency_pair='btc_jpy',
@@ -46,6 +47,7 @@ class ZaifApi:
     ##################################
     #zaifでbtc分だけのBitcoinを買う関数
     ##################################
+    @retry(exceptions=(Exception),tries=3,delay=1)
     def trade_zaif_ask(self,btc,zaif_ask):
         zaif = ZaifTradeApi(self.API_KEY,self.API_SECRET_KEY)
         zaif.trade(currency_pair='btc_jpy',

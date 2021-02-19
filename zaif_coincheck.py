@@ -45,6 +45,9 @@ class ZaifCoincheckTrade:
         #ブローカに最初に置いたBTCの枚数(両方のブローカに同じ枚数を配置する。)
         self.btc_start_amount = self.conf.getfloat('trade','btc_start_amount')
 
+        #ブローカに最初に置いた円残高(両方のブローカに同じ金額を配置する。)
+        self.yen_start_amount = self.conf.getfloat('trade','yen_start_amount')
+
         #スプレッドモードで動作しているか、リバースモードで動作しているか。
         self.action_mode = ''
 
@@ -70,11 +73,19 @@ class ZaifCoincheckTrade:
         #何秒ごとに処理を行うか。（秒）
         self.interval_second = self.conf.getint('trade','interval_second')
 
+        #どちらのブローカーのトレード比重を大きくするか。
+        self.broker_weight = self.conf.get('trade','broker_weight')
+
+
         #どちらのブローカーにBTCを戻すか。
         self.reverse_broker = ''
 
         #最新の残高状態
         self.balance = []
+
+        #最終トレード時刻
+        #最終トレード価格
+
 
         #ZaifAPI
         self.zaif_api = zaif_api.ZaifApi()
@@ -285,16 +296,38 @@ class ZaifCoincheckTrade:
         log.critical("##### BUY => Zaif  SELL => Coincheck")
         log.critical("####################################")
 
+        balance_before = self.getBalance()
+
         if self.mode == "production":
-            #zaifで買う。
-            self.zaif_api.trade_zaif_ask(btc_lot,zaif_ask)
+
             #coincheckで売る。
             self.coin_api.trade_coin_bid(btc_lot)
+
+            coin_balance = self.getBalance()
+
+            if (balance_before['coin_jpy'] == coin_balance['coin_jpy'] or
+                balance_before['coin_btc'] == coin_balance['coin_btc']):
+
+                log.critical('Coincheckで売れなかったのでトレードを中止します。')
+                return
+
+            #zaifで買う。
+            for i in range(3):
+                
+                self.zaif_api.trade_zaif_ask(btc_lot,zaif_ask)
+                zaif_balance = self.getBalance()
+                
+                if (balance_before['zaif_jpy'] != zaif_balance['zaif_jpy'] or
+                    balance_before['zaif_btc'] != zaif_balance['zaif_btc']):
+                    break
+            else:
+                log.critical("Zaifで買えませんでした。不整合発生中")
+                return
+
             #zaifとコインチェックの残高を取得する。
-            balance = self.getBalance()
+            #balance = self.getBalance()
 
         else:
-            balance_before = self.getBalance()
             #zaifで買った価格と数量を出力する。
             zaif_jpy = int(balance_before['zaif_jpy']) - (btc_lot * zaif_ask)
             zaif_btc = float(balance_before['zaif_btc']) + btc_lot
@@ -321,13 +354,34 @@ class ZaifCoincheckTrade:
         log.critical("##### BUY => Coincheck  SELL => Zaif")
         log.critical("####################################")
 
+        balance_before = self.getBalance()
+
         if self.mode == "production":
+
             #Coincheckで買う
             self.coin_api.trade_coin_ask(btc_lot,coin_ask)
-            #zaifで売る。
-            self.zaif_api.trade_zaif_bid(btc_lot,zaif_bid)
-            #zaifとコインチェックの残高を取得する。
-            balance = self.getBalance()
+
+            coin_balance = self.getBalance()
+
+            if (balance_before['coin_jpy'] == coin_balance['coin_jpy'] or
+                balance_before['coin_btc'] == coin_balance['coin_btc']):
+
+                log.critical('Coincheckで買えなかったのでトレードを中止します。')
+                return
+
+            for i in range(3):
+
+                #zaifで売る。
+                self.zaif_api.trade_zaif_bid(btc_lot,zaif_bid)
+                #zaifとコインチェックの残高を取得する。
+                zaif_balance = self.getBalance()
+
+                if (balance_before['zaif_jpy'] != zaif_balance['zaif_jpy'] or
+                    balance_before['zaif_btc'] != zaif_balance['zaif_btc']):
+                    break
+            else:
+                log.critical("Zaifで売れませんでした。不整合発生中")
+                return
 
         else:
             balance_before = self.getBalance()
@@ -477,10 +531,15 @@ class ZaifCoincheckTrade:
             log.critical("    Coincheck:" + str(self.balance['coin_jpy']))
             log.critical("     Zaif-BTC:" + str(self.balance['zaif_btc']))
             log.critical("Coincheck-BTC:" + str(self.balance['coin_btc']))
-            log.critical("TOTAL JPY:" + str(self.balance['zaif_jpy'] + self.balance['coin_jpy']))
+            total_jpy = self.balance['zaif_jpy'] + self.balance['coin_jpy']
+            log.critical("TOTAL JPY:" + str(total_jpy))
 
             total_btc = self.balance['zaif_btc'] + self.balance['coin_btc']
             log.critical("TOTAL BTC:" + str(total_btc))
+
+
+
+            #log.critical("BTC価格" +  str())
 
             if total_btc < self.btc_start_amount * 0.99 or total_btc > self.btc_start_amount *1.01:
                 log.critical("####################################################")
@@ -509,20 +568,45 @@ class ZaifCoincheckTrade:
 
             elif self.action_mode == 'reverse':
 
-                #
-                # 最初の残高に戻るまで待たずに、btcの最低残高に戻ったら、エントリできるようにする。
-                #
+                #リバースモードの時にトレードを多くしたいブローカーの比重をかける。
+
+                #TOTAL円残高の75%以上にする。
+                total_yen = float(self.balance['zaif_jpy']) + float(self.balance['coin_jpy'])
+                yen_limit = total_yen * 0.75               
+                btc_limit = total_btc * 0.5
+
+                #zaifでの買いにウェイトを置きたい。
+                if self.broker_weight == 'zaif':
+
+                    ztoc_btc_limit = self.minimum_btc_limit
+                    ztoc_yen_limit = self.minimum_yen_limit               
+                    ctoz_btc_limit = yen_limit
+                    ctoz_yen_limit = btc_limit               
+
+                #Coincheckでの買いにウェイトを置きたい。
+                elif self.broker_weight == 'coincheck':
+                    ztoc_btc_limit = yen_limit
+                    ztoc_yen_limit = btc_limit               
+                    ctoz_btc_limit = self.minimum_btc_limit
+                    ctoz_yen_limit = self.minimum_yen_limit               
+               
+                else:
+                    ztoc_btc_limit = self.minimum_btc_limit
+                    ztoc_yen_limit = self.minimum_yen_limit               
+                    ctoz_btc_limit = self.minimum_btc_limit
+                    ctoz_yen_limit = self.minimum_yen_limit               
+
                 if( self.reverse_broker == 'ZTOC' and
-                    self.balance['coin_btc'] >= self.minimum_btc_limit and
-                    self.balance['zaif_jpy'] >= self.minimum_yen_limit ):
+                    self.balance['coin_btc'] >= ztoc_btc_limit and
+                    self.balance['zaif_jpy'] >= ztoc_yen_limit ):
 
                     self.action_mode = 'spread'
                     self.reverse_broker = ''
                     log.critical('REVERSE -> SPREAD')
 
                 elif( self.reverse_broker == 'CTOZ' and
-                      self.balance['zaif_btc'] >= self.minimum_btc_limit and
-                      self.balance['coin_jpy'] >= self.minimum_yen_limit ):
+                      self.balance['zaif_btc'] >= ctoz_btc_limit and
+                      self.balance['coin_jpy'] >= ctoz_yen_limit ):
 
                     self.action_mode = 'spread'
                     self.reverse_broker = ''
@@ -574,11 +658,21 @@ class ZaifCoincheckTrade:
             log.critical("ZA-CB:" + str(board['coin_tradable_bid_price'] - board['zaif_tradable_ask_price'] ))
             log.critical("CA-ZB:" + str(board['zaif_tradable_bid_price'] - board['coin_tradable_ask_price'] ))
 
+
+            bid = 0
+            if board['zaif_bid'][0] < board['coin_bid'][0]:
+                bid = board['zaif_bid'][0]
+            else:
+                bid = board['coin_bid'][0]
+
+            #print(total_btc)
+            #print(bid)
+
+            lost_btc_price = (self.btc_start_amount * bid) - (total_btc * bid) 
+            profit = total_jpy - self.yen_start_amount - lost_btc_price
+            log.critical("総利益:" + "{:.0f}".format(profit))
+
             log.critical("-----------------------------------------------------------------")
-
-
-
-
 
 
 
