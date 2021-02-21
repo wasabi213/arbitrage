@@ -39,10 +39,11 @@ class ZaifApi:
     @retry(exceptions=(Exception),tries=3,delay=1)
     def trade_zaif_bid(self,btc,zaif_bid):
         zaif = ZaifTradeApi(self.API_KEY,self.API_SECRET_KEY)
-        zaif.trade(currency_pair='btc_jpy',
-        action = 'ask', #zaifでは「ask」が「売り」になる
-        amount = btc,
-        price = int((zaif_bid - 10000) / 10) * 10)
+        r = zaif.trade( currency_pair='btc_jpy',
+                        action = 'ask', #zaifでは「ask」が「売り」になる
+                        amount = btc,
+                        price = int((zaif_bid - 10000) / 10) * 10)
+        return r
 
     ##################################
     #zaifでbtc分だけのBitcoinを買う関数
@@ -50,10 +51,12 @@ class ZaifApi:
     @retry(exceptions=(Exception),tries=3,delay=1)
     def trade_zaif_ask(self,btc,zaif_ask):
         zaif = ZaifTradeApi(self.API_KEY,self.API_SECRET_KEY)
-        zaif.trade(currency_pair='btc_jpy',
-        action = 'bid', #zaifでは「bid」が「買い」になる
-        amount = btc,
-        price = int((zaif_ask + 10000) / 10) * 10)
+        r = zaif.trade( currency_pair='btc_jpy',
+                        action = 'bid', #zaifでは「bid」が「買い」になる
+                        amount = btc,
+                        price = int((zaif_ask + 10000) / 10) * 10)
+
+        return r
 
     ################################
     #残高情報を取得する。
@@ -62,10 +65,7 @@ class ZaifApi:
     def zaif_trade_history(self):
         zaif = ZaifTradeApi(self.API_KEY,self.API_SECRET_KEY)
         history = zaif.trade_history(count=1)
-
-        print(history)
         log.tradelog(history)
-
         return history
 
     ################################
