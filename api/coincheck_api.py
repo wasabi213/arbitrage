@@ -92,7 +92,7 @@ class CoincheckApi:
     ###############################################
     #残高の取得
     ###############################################
-    @retry(exceptions=(Exception),tries=3,delay=5)
+    @retry(exceptions=(Exception),tries=5,delay=15)
     def coin_get_balance(self):
         #order_type : market_sell : 成行注文　現物取引　売り
         #nonce = int((datetime.datetime.today() - datetime.datetime(2021,2,11)).total_seconds()) * 100
