@@ -14,7 +14,9 @@ import sys
 import csv
 import configparser
 import codecs
+import traceback
 from zaifapi import ZaifPublicApi,ZaifTradeApi
+from zaifapi.api_error import ZaifApiError, ZaifApiNonceError
 from api import zaif_api,coincheck_api
 from common import spreadlog,slack
 from common.logger import Logger
@@ -330,35 +332,25 @@ class ZaifCoincheckTrade:
                 self.secondary_latest_sell_time = result['created_at']
 
 
-            #zaifで買う。
-            for i in range(3):
-                
+
+
+            try:
+                #zaifはapiで３回リトライしているので回す必要はない。
                 result = self.zaif_api.trade_zaif_ask(btc_lot,zaif_ask)
-
-                if result == None or result['success'] == None:
-                    log.critical('Zaifのトレードが失敗したので残高を確認して下さい。')
-                    continue
- 
-                elif result['success'] != 1:
-                    log.critical('Zaifのトレードが失敗したので残高を確認して下さい。')
-                    continue
- 
-                elif result['success'] == 1:
-                    log.critical("Zaif 最終トレード時刻:" + datetime.datetime.now().isoformat())
-                    log.critical("Zaif 最終トレード価格:" + str(zaif_ask))
-                    log.critical("Zaif 最終トレードロット:" + str(result['received']))
-                    self.primary_latest_buy = zaif_ask
-                    self.primary_latest_buy_lot = result['received']
-                    self.primary_latest_buy_time = datetime.datetime.now().isoformat()
-
-                    return
-
-            else:
-                log.critical("Zaifで買えませんでした。不整合発生中")
+            except ZaifApiError:
+                log.critical('Zaifのトレードが失敗したので残高を確認して下さい。')
+                log.critical(traceback.format_exc())
                 return
-
+            else:
+                log.critical("Zaif 最終トレード時刻:" + datetime.datetime.now().isoformat())
+                log.critical("Zaif 最終トレード価格:" + str(zaif_ask))
+                log.critical("Zaif 最終トレードロット:" + str(result['received']))
+                self.primary_latest_buy = zaif_ask
+                self.primary_latest_buy_lot = result['received']
+                self.primary_latest_buy_time = datetime.datetime.now().isoformat()
+                return
+ 
         else:
-
             balance_before = self.getBalance()            
             #zaifで買った価格と数量を出力する。
             zaif_jpy = int(balance_before['zaif_jpy']) - (btc_lot * zaif_ask)
@@ -378,7 +370,7 @@ class ZaifCoincheckTrade:
                             }
  
             self.debugWriteBalance(balance)
-
+            return
 
     #Coincheckで買ってZaifで売る。
     def TradeBuyCoincheckSellZaif(self,btc_lot,coin_ask,zaif_bid):
@@ -407,31 +399,21 @@ class ZaifCoincheckTrade:
                 self.secondary_latest_buy_lot = result['amount']
                 self.secondary_latest_buy_time = result['created_at']
 
-            #zaifで売る。
-            for i in range(3):
-
+            try:
+                #zaifはapiで３回リトライしているので回す必要はない。
                 result = self.zaif_api.trade_zaif_bid(btc_lot,zaif_bid)
-
-                if result == None or result['success'] == None:
-                    log.critical('Zaifのトレードが失敗したので残高を確認して下さい。')
-                    continue
-
-                elif result['success'] != 1:
-                    log.critical('Zaifのトレードが失敗したので残高を確認して下さい。')
-                    continue
-
-                elif result['success'] == 1:
-
-                    log.critical("Zaif 最終トレード時刻:" + datetime.datetime.now().isoformat())
-                    log.critical("Zaif 最終トレード価格:" + str(zaif_bid))
-                    log.critical("Zaif 最終トレードロット:" + str(result['received']))
-                    self.primary_latest_sell = zaif_bid
-                    self.primary_latest_sell_lot = result['received']
-                    self.primary_latest_sell_time = datetime.datetime.now().isoformat()
-
-                    return
+            except ZaifApiError:
+                log.critical('Zaifのトレードが失敗したので残高を確認して下さい。')
+                log.critical(traceback.format_exc())
+                return
             else:
-                log.critical("Zaifで売れませんでした。不整合発生中")
+                log.critical("Zaif 最終トレード時刻:" + datetime.datetime.now().isoformat())
+                log.critical("Zaif 最終トレード価格:" + str(zaif_bid))
+                log.critical("Zaif 最終トレードロット:" + str(result['received']))
+                self.primary_latest_sell = zaif_bid
+                self.primary_latest_sell_lot = result['received']
+                self.primary_latest_sell_time = datetime.datetime.now().isoformat()
+
                 return
 
         else:
@@ -455,6 +437,7 @@ class ZaifCoincheckTrade:
                       }
  
             self.debugWriteBalance(balance)
+            return
 
     #スプレッド取引を行う。
     def spreadAction(self,board,board_info):
