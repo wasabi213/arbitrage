@@ -97,7 +97,6 @@ class CoincheckApi:
         #order_type : market_sell : 成行注文　現物取引　売り
         #nonce = int((datetime.datetime.today() - datetime.datetime(2021,2,11)).total_seconds()) * 100
         nonce = self.buildNonce()
-
         c = self.ccPrivateApi("/api/accounts/balance",nonce)
         r = c.json()
 
