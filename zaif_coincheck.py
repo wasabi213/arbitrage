@@ -335,10 +335,15 @@ class ZaifCoincheckTrade:
                 
                 result = self.zaif_api.trade_zaif_ask(btc_lot,zaif_ask)
 
-                if result['success'] != 1:
+                if result == None or result['success'] == None:
                     log.critical('Zaifのトレードが失敗したので残高を確認して下さい。')
-                    return
-                else:
+                    continue
+ 
+                elif result['success'] != 1:
+                    log.critical('Zaifのトレードが失敗したので残高を確認して下さい。')
+                    continue
+ 
+                elif result['success'] == 1:
                     log.critical("Zaif 最終トレード時刻:" + datetime.datetime.now().isoformat())
                     log.critical("Zaif 最終トレード価格:" + str(zaif_ask))
                     log.critical("Zaif 最終トレードロット:" + str(result['received']))
@@ -407,11 +412,16 @@ class ZaifCoincheckTrade:
 
                 result = self.zaif_api.trade_zaif_bid(btc_lot,zaif_bid)
 
-                if result['success'] != 1:
+                if result == None or result['success'] == None:
                     log.critical('Zaifのトレードが失敗したので残高を確認して下さい。')
-                    return
- 
-                else:
+                    continue
+
+                elif result['success'] != 1:
+                    log.critical('Zaifのトレードが失敗したので残高を確認して下さい。')
+                    continue
+
+                elif result['success'] == 1:
+
                     log.critical("Zaif 最終トレード時刻:" + datetime.datetime.now().isoformat())
                     log.critical("Zaif 最終トレード価格:" + str(zaif_bid))
                     log.critical("Zaif 最終トレードロット:" + str(result['received']))
