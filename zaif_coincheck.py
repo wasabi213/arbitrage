@@ -323,8 +323,8 @@ class ZaifCoincheckTrade:
                 return
             else:
                 log.critical("CoinCheck 最終トレード時刻:" + result['created_at'])
-                log.critical("CoinCheck 最終トレード価格:" + result['rate'])
-                log.critical("CoinCheck 最終トレードロット:" + result['amount'])
+                log.critical("CoinCheck 最終トレード価格:" + str(result['rate']))
+                log.critical("CoinCheck 最終トレードロット:" + str(result['amount']))
                 self.secondary_latest_sell = result['rate']
                 self.secondary_latest_sell_lot = result['amount']
                 self.secondary_latest_sell_time = result['created_at']
@@ -340,8 +340,8 @@ class ZaifCoincheckTrade:
                     return
                 else:
                     log.critical("Zaif 最終トレード時刻:" + datetime.datetime.now().isoformat())
-                    log.critical("Zaif 最終トレード価格:" + zaif_ask)
-                    log.critical("Zaif 最終トレードロット:" + result['received'])
+                    log.critical("Zaif 最終トレード価格:" + str(zaif_ask))
+                    log.critical("Zaif 最終トレードロット:" + str(result['received']))
                     self.primary_latest_buy = zaif_ask
                     self.primary_latest_buy_lot = result['received']
                     self.primary_latest_buy_time = datetime.datetime.now().isoformat()
@@ -396,8 +396,8 @@ class ZaifCoincheckTrade:
                 return
             else:
                 log.critical("CoinCheck 最終トレード時刻:" + result['created_at'])
-                log.critical("CoinCheck 最終トレード価格:" + result['rate'])
-                log.critical("CoinCheck 最終トレードロット:" + result['amount'])
+                log.critical("CoinCheck 最終トレード価格:" + str(result['rate']))
+                log.critical("CoinCheck 最終トレードロット:" + str(result['amount']))
                 self.secondary_latest_buy = result['rate']
                 self.secondary_latest_buy_lot = result['amount']
                 self.secondary_latest_buy_time = result['created_at']
@@ -413,8 +413,8 @@ class ZaifCoincheckTrade:
  
                 else:
                     log.critical("Zaif 最終トレード時刻:" + datetime.datetime.now().isoformat())
-                    log.critical("Zaif 最終トレード価格:" + zaif_bid)
-                    log.critical("Zaif 最終トレードロット:" + result['received'])
+                    log.critical("Zaif 最終トレード価格:" + str(zaif_bid))
+                    log.critical("Zaif 最終トレードロット:" + str(result['received']))
                     self.primary_latest_sell = zaif_bid
                     self.primary_latest_sell_lot = result['received']
                     self.primary_latest_sell_time = datetime.datetime.now().isoformat()
