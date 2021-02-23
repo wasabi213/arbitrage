@@ -331,9 +331,6 @@ class ZaifCoincheckTrade:
                 self.secondary_latest_sell_lot = result['amount']
                 self.secondary_latest_sell_time = result['created_at']
 
-
-
-
             try:
                 #zaifはapiで３回リトライしているので回す必要はない。
                 result = self.zaif_api.trade_zaif_ask(btc_lot,zaif_ask)
@@ -348,6 +345,10 @@ class ZaifCoincheckTrade:
                 self.primary_latest_buy = zaif_ask
                 self.primary_latest_buy_lot = result['received']
                 self.primary_latest_buy_time = datetime.datetime.now().isoformat()
+
+                #トレードが成功した場合は、ズレ防止のためしばらく停止する。
+                time.sleep(20)
+
                 return
  
         else:
@@ -413,6 +414,9 @@ class ZaifCoincheckTrade:
                 self.primary_latest_sell = zaif_bid
                 self.primary_latest_sell_lot = result['received']
                 self.primary_latest_sell_time = datetime.datetime.now().isoformat()
+
+                #トレードが成功した場合は、ズレ防止のためしばらく停止する。
+                time.sleep(20)
 
                 return
 
