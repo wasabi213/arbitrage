@@ -36,10 +36,10 @@ class StatusMonitor:
         total_asset_price = int(total_btc_price) + int(total_jpy)
 
         data = {
-                "profit": info["add_info"]["profit"],
-                "primary_jpy": info["balance"]["zaif_jpy"],
+                "profit": "{:.0f}".format(float(info["add_info"]["profit"])),
+                "primary_jpy": "{:.0f}".format(float(info["balance"]["zaif_jpy"])),
                 "primary_btc": info["balance"]["zaif_btc"],
-                "secondary_jpy": info["balance"]["coin_jpy"],
+                "secondary_jpy": "{:.0f}".format(float(info["balance"]["coin_jpy"])),
                 "secondary_btc": info["balance"]["coin_btc"],
                 "total_jpy": total_jpy,
                 "total_btc": total_btc,
@@ -49,8 +49,8 @@ class StatusMonitor:
                 "primary_over_threshold_time": info['add_info']['primary_over_threshold_time'],
                 "secondary_over_threshold_time": info['add_info']['secondary_over_threshold_time'],
                 "entry_rate": info['add_info']['entry_rate'],
-                "reverse_side": info['add_info']['reverse_side'],
-                "unbalance": info['add_info']['unbalance'], 
+                "reverse_side": str(info['add_info']['reverse_side']),
+                "unbalance": str(info['add_info']['unbalance']), 
                 "btc_start_amount": info['add_info']['btc_start_amount'], 
                 "primary_latest_buy": info['add_info']['primary_latest_buy'],
                 "primary_latest_buy_lot": info['add_info']['primary_latest_buy_lot'],                  
