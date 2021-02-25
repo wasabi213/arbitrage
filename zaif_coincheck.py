@@ -127,6 +127,15 @@ class ZaifCoincheckTrade:
                 json.dump(balance,w)
             log.critical("デバッグ用残高ファイルを作成しました。")
 
+    #メインループを停止する。
+    def isStopProcess(self):
+        if os.path.exists(".stop_arbitrage"):
+            os.remove(".stop_arbitrage")
+            return True
+        else:
+            return False
+
+
     #zaifとcoinncheckの残高を取得する。
     def getBalance(self):
 
@@ -956,6 +965,10 @@ class ZaifCoincheckTrade:
 
 
             self.statusMonitor(info)
+
+            if self.isStopProcess() == True:
+                log.critical("処理を終了します。")
+                break
 
     def statusMonitor(self,info):
         monitor = StatusMonitor("zaif","coincheck")
