@@ -135,6 +135,15 @@ class ZaifCoincheckTrade:
         else:
             return False
 
+    #エントリできる最小金額を算出する。
+    def calcMinimumJpyBalance(self,board):
+        if board['zaif_ask'] < board['coin_ask']:
+            wk_calc = board['zaif_ask'][0]
+        else:
+            wk_calc = board['coin_ask'][0]
+        
+        wk = "{:.0f}".format((float(wk_calc) * self.btc_lot) * 1.1)
+        return int(wk)
 
     #zaifとcoinncheckの残高を取得する。
     def getBalance(self):
@@ -758,8 +767,16 @@ class ZaifCoincheckTrade:
     #メイン処理
     def mainProcess(self):
 
+        ############################################################
+        #ここでJPY、BTC残高の初期設定、エントリ可能最低額の初期設定が必要
+        ############################################################
+        #口座残高を取得して、インスタンスに保持する。
+        self.balance = self.getBalance()
+        self.yen_start_amount = float(self.balance['zaif_jpy']) + float(self.balance['coin_jpy'])
+
+
         reverse_side = "" #リバース時の方向を設定する。(ログ出力のため)
-        unbalance = "" #トレードの不整合が怒っていないか。
+        unbalance = "" #トレードの不整合が起こっていないか。
 
         if self.mode != 'production':
             self.create_debug_log()
@@ -963,6 +980,8 @@ class ZaifCoincheckTrade:
                         "add_info":add_info,
                     }
 
+            #エントリ可能な最低額を更新する。
+            self.minimum_yen_limit = self.calcMinimumJpyBalance(board)
 
             self.statusMonitor(info)
 
