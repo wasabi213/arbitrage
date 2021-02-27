@@ -31,7 +31,7 @@ class ZaifApi:
         self.MODE = self.conf.get("env","mode")
         self.API_KEY = self.conf.get("api_keys","zaif_access_key")
         self.API_SECRET_KEY = self.conf.get("api_keys","zaif_secret_key")
-        self.LOG_PATH = self.conf.get("path","trade_log_path")  #ログパスの取得
+        self.LOG_PATH = self.conf.get("system","trade_log_path")  #ログパスの取得
 
     ##################################
     #zaifでbtc分だけのBitcoinを売る関数
@@ -43,6 +43,7 @@ class ZaifApi:
                         action = 'ask', #zaifでは「ask」が「売り」になる
                         amount = btc,
                         price = int((zaif_bid - 10000) / 10) * 10)
+        log.tradelog(r)
         return r
 
     ##################################
@@ -55,7 +56,7 @@ class ZaifApi:
                         action = 'bid', #zaifでは「bid」が「買い」になる
                         amount = btc,
                         price = int((zaif_ask + 10000) / 10) * 10)
-
+        log.tradelog(r)
         return r
 
     ################################

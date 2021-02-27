@@ -36,6 +36,8 @@ class StatusMonitor:
         total_asset_price = int(total_btc_price) + int(total_jpy)
 
         data = {
+                "primary":self.primary_broker,
+                "secondary":self.secondary_broker,
                 "profit": "{:.0f}".format(float(info["add_info"]["profit"])),
                 "primary_jpy": "{:.0f}".format(float(info["balance"]["zaif_jpy"])),
                 "primary_btc": info["balance"]["zaif_btc"],
@@ -82,8 +84,8 @@ class StatusMonitor:
                 "secondary_safety_bid_lot": info['board']['coin_tradable_bid_lot_total'],
                 "pbsa_gap": info['board']['zaif_bid'][0] - info['board']['coin_ask'][0],
                 "sbpa_gap": info['board']['coin_bid'][0] - info['board']['zaif_ask'][0] ,
-                "pbsa_safety_gap": info['board']['coin_tradable_bid_price'] - info['board']['zaif_tradable_ask_price'],
-                "sbpa_safety_gap": info['board']['zaif_tradable_bid_price'] - info['board']['coin_tradable_ask_price'],
+                "pbsa_safety_gap": info['board']['zaif_tradable_bid_price'] - info['board']['coin_tradable_ask_price'],
+                "sbpa_safety_gap": info['board']['coin_tradable_bid_price'] - info['board']['zaif_tradable_ask_price'],
                 "entry_spread": info['add_info']['entry_spread'],
                 "reverse_spread": info['add_info']['reverse_spread'],
                }

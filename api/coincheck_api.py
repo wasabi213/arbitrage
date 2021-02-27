@@ -20,8 +20,8 @@ sys.path.append( str(current_dir) + '/../' )
 from common.logger import Logger
 
 CONFIG_FILE = '../config/zaif_coincheck_config.ini'
-#log = logger.Logger(__name__)
 log = Logger(__name__)
+
 
 class CoincheckApi:
 
@@ -34,7 +34,7 @@ class CoincheckApi:
         self.MODE = self.conf.get('env','mode')
         self.API_KEY = self.conf.get("api_keys","coin_access_key")
         self.API_SECRET_KEY = self.conf.get("api_keys","coin_secret_key")
-        self.LOG_PATH = self.conf.get("path","trade_log_path")  #ログパスの取得
+        self.LOG_PATH = self.conf.get("system","trade_log_path")  #ログパスの取得
 
     ##coincheck関係
     #######################################
@@ -133,6 +133,8 @@ class CoincheckApi:
             error_message = r['error']
             msg = str(datetime.datetime.now()) + ',ccerror,'+ str(error_message) + '\n'
             log.error(msg)
+        else:
+            log.tradelog(r)
 
         return r
 
@@ -157,6 +159,8 @@ class CoincheckApi:
             error_message = r['error']
             msg = str(datetime.datetime.now()) + ',ccerror,'+ str(error_message) + '\n'
             log.error(msg)
+        else:
+            log.tradelog(r)
 
         return r
     ##############################
@@ -198,17 +202,14 @@ class CoincheckApi:
     def coin_get_balance_btc(self,result):
         return result['btc']
 
+    ##########################
+    # Nonceを作成する。
+    ##########################
     def buildNonce(self):
-
-        #nonce = int(datetime.datetime.now().strftime('%Y%m%d%H%M%S%f'))-int(datetime.datetime(2021,2,11,0,0,0).strftime('%Y%m%d%H%M%S%f'))
-        #log.error(nonce)
         now = datetime.datetime.now()
         now_ts = now.timestamp()
         nonce = int(now_ts * 1000000)
-
-        log.error(nonce)
-
-
+        log.debug(nonce)
         return nonce
 
 
@@ -218,12 +219,11 @@ if __name__ == "__main__":
 
     api = CoincheckApi()
 
-    #print(api.coin_get_balance())
+    print(api.coin_get_balance())
     #print(api.coin_get_ticker())
     #print(api.trade_coin_bid(0))
     #print(api.trade_coin_ask(0,0))
     #print(api.trade_coin_ask_limit_price(0,0))
     #print(api.coincheck_get_board())
-
     #print(api.coin_get_transactions())
-    print(api.buildNonce())
+    #print(api.buildNonce())

@@ -54,7 +54,7 @@ class Logger:
 		if inifile.getboolean('system','trade_log') == True:
 			#レポートログ用ハンドラ設定
 			self.trade_log_path = inifile.get('system','trade_log_path')
-			self.trade_logger = getLogger('trade')
+			self.trade_logger = getLogger(name)
 			self.trade_logger.setLevel(self.system_log_level)
 
 			#trade_handler = logging.handlers.FileHandler(filename=self.trade_log_path)

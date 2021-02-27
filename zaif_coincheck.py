@@ -32,10 +32,11 @@ log = Logger(__name__)
 class ZaifCoincheckTrade:
 
     def __init__(self):
+
+
         self.conf = configparser.ConfigParser() 
         self.conf.read_file(codecs.open(CONFIG_FILE,"r","utf8"))
-
-        self.LOG_PATH = self.conf.get('path','trade_log_path') 
+        self.LOG_PATH = self.conf.get('system','trade_log_path') 
 
         #--------------------------------------------------------------------
         #動作モード
@@ -82,7 +83,6 @@ class ZaifCoincheckTrade:
         #どちらのブローカーのトレード比重を大きくするか。
         self.broker_weight = self.conf.get('trade','broker_weight')
 
-
         #どちらのブローカーにBTCを戻すか。
         self.reverse_broker = ''
 
@@ -102,7 +102,6 @@ class ZaifCoincheckTrade:
         self.secondary_latest_sell = ""
         self.secondary_latest_sell_lot = ""
         self.secondary_latest_sell_time = ""
-
 
         #ZaifAPI
         self.zaif_api = ZaifApi()
@@ -577,7 +576,6 @@ class ZaifCoincheckTrade:
 
     def fixUnbalance(self,board):
 
-
         #BTCが余っている場合（BTCを売る）
         while True:
 
@@ -588,6 +586,7 @@ class ZaifCoincheckTrade:
             total_jpy = self.balance['zaif_jpy'] + self.balance['coin_jpy']
             if total_btc < self.btc_start_amount and total_jpy < self.yen_start_amount:
                 log.critical("異常発生！手動でアンバランスを修正してください。")
+                slack.Slack.post_message("自動修正不可能なアンバランスが発生しました。手動で修正して下さい。")
                 sys.exit()
 
             target_broker = ""
@@ -666,6 +665,9 @@ class ZaifCoincheckTrade:
                     except ZaifApiError:
                         log.critical('アンバランス修正中にZaifのトレードが失敗しました。')
                         log.critical(traceback.format_exc())
+                        slack.Slack.post_message("アンバランスの修正中にZaifのトレードが失敗しました。自動修正中です。")
+                        time.sleep(30)
+
                 else:
                     pass
 
@@ -745,6 +747,8 @@ class ZaifCoincheckTrade:
                     except ZaifApiError:
                         log.critical('アンバランス修正中にZaifのトレードが失敗しました。')
                         log.critical(traceback.format_exc())
+                        slack.Slack.post_message("アンバランスの修正中にZaifのトレードが失敗しました。自動修正中です。")
+                        time.sleep(30)
                 else:
                     pass
                 
@@ -757,7 +761,6 @@ class ZaifCoincheckTrade:
                 else:
                     log.critical("アンバランスが解消されないので再調整します。。")
 
-
                 time.sleep(1)
 
         return 
@@ -766,14 +769,13 @@ class ZaifCoincheckTrade:
 
     #メイン処理
     def mainProcess(self):
-
         ############################################################
         #ここでJPY、BTC残高の初期設定、エントリ可能最低額の初期設定が必要
         ############################################################
         #口座残高を取得して、インスタンスに保持する。
         self.balance = self.getBalance()
         self.yen_start_amount = float(self.balance['zaif_jpy']) + float(self.balance['coin_jpy'])
-
+        self.btc_start_amount = float(self.balance['zaif_btc']) + float(self.balance['coin_btc'])
 
         reverse_side = "" #リバース時の方向を設定する。(ログ出力のため)
         unbalance = "" #トレードの不整合が起こっていないか。
@@ -905,10 +907,14 @@ class ZaifCoincheckTrade:
                 log.critical("スタート時ののBTC残高:" + str(self.btc_start_amount))
                 unbalance = "不整合"
 
+                slack.Slack.post_message("不整合が発生したので、不整合解消処理に入ります。")
+    
                 ###################
                 #不整合解消
                 ###################
                 self.fixUnbalance(board)
+                log.critical("不整合解消処理が完了しました。")
+                slack.Slack.post_message("不整合解消処理が完了しました。")
 
             else:
                 unbalance = ""
@@ -983,8 +989,10 @@ class ZaifCoincheckTrade:
             #エントリ可能な最低額を更新する。
             self.minimum_yen_limit = self.calcMinimumJpyBalance(board)
 
+            #Web用情報を出力する。
             self.statusMonitor(info)
 
+            #プログラムを終了する。
             if self.isStopProcess() == True:
                 log.critical("処理を終了します。")
                 break
@@ -992,11 +1000,6 @@ class ZaifCoincheckTrade:
     def statusMonitor(self,info):
         monitor = StatusMonitor("zaif","coincheck")
         monitor.setInfoforZaifCoincheck(info)
-
-
-
-
-
 
 
 if __name__ == "__main__":
