@@ -65,7 +65,7 @@ class Logger:
 			self.trade_logger.addHandler(trade_handler)
 
 	def debug(self, msg):
-		self.logger.debug(self.getCallerInfo() + msg)
+		self.logger.debug(self.getCallerInfo() + str(msg))
 		#print(msg)
 
 	def info(self, msg):
