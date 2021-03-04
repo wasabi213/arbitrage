@@ -584,6 +584,7 @@ class ZaifCoincheckTrade:
             #アンバランスのfixで解消できないケースを検出する。
             total_btc = self.balance['zaif_btc'] + self.balance['coin_btc']
             total_jpy = self.balance['zaif_jpy'] + self.balance['coin_jpy']
+        
             if total_btc < self.btc_start_amount and total_jpy < self.yen_start_amount:
                 log.critical("異常発生！手動でアンバランスを修正してください。")
                 slack.Slack.post_message("自動修正不可能なアンバランスが発生しました。手動で修正して下さい。")
@@ -591,12 +592,13 @@ class ZaifCoincheckTrade:
 
             target_broker = ""
 
+            #BTCの買いが超過してしまっている場合
             if total_btc > self.btc_start_amount:
                 #どちらのブローカーでBTCを買うことができるか。
-                if self.balance['zaif_jpy'] < self.btc_lot:
+                if self.balance['zaif_jpy'] < self.btc_lot * board["zaif_tradable_bid_price"]:
                     target_broker = "coin"
 
-                elif self.balance['coin_jpy'] < self.btc_lot:
+                elif self.balance['coin_jpy'] < self.btc_lot * board["coin_tradable_bid_price"]:
                     target_broker = "zaif"
 
                 #どちらのブローカーでBTCを売ることができるか。
@@ -604,11 +606,16 @@ class ZaifCoincheckTrade:
                     self.balance['coin_btc'] > self.btc_lot):
 
                     #どちらのブローカーでBTCを売った方が利益が出るか。
-                    if board["zaif_tradable_bid_price"] > board["coin_tradable_bid_price"] :
+                    if board["zaif_tradable_bid_price"] > board["coin_tradable_bid_price"]:
                         target_broker = "zaif"
 
                     else:
                         target_broker = "coin"
+                else:
+                    log.critical("異常発生！手動でアンバランスを修正してください。")
+                    slack.Slack.post_message("自動修正不可能なアンバランスが発生しました。手動で修正して下さい。")
+                    sys.exit()
+
 
                 #BTCの超過分を売る。
                 if target_broker == "coin":
