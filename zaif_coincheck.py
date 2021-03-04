@@ -256,7 +256,7 @@ class ZaifCoincheckTrade:
             zaif_tradable_ask_lot_total += zaif_ask_lot[i]
             zaif_tradable_bid_lot_total += zaif_bid_lot[i]
             coin_tradable_ask_lot_total += coin_ask_lot[i]
-            coin_tradable_bid_lot_total += coin_ask_lot[i]
+            coin_tradable_bid_lot_total += coin_bid_lot[i]
 
         zaif_tradable_ask_price = float(zaif_result['asks'][board_count][0])
         zaif_tradable_bid_price = float(zaif_result['bids'][board_count][0])
