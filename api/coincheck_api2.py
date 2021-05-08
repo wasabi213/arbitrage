@@ -91,7 +91,6 @@ class CoincheckApi:
         else:
             return self.debugMakertAsk(btc,ask)
 
-
     ###################################
     #coincheckでbtc分のBitcoinを売る関数
     ################################### 
@@ -143,7 +142,6 @@ class CoincheckApi:
                 return item['balance']
 
 
-
     def debugGetBalance(self):
 
         if os._exists(self.DEBUG_BALANCE_LOG) != True:
@@ -186,10 +184,6 @@ class CoincheckApi:
         f.close()
 
         log.info("Coincheckの残高ログをBidで更新しました。")
-
-
-
-
 
 
     #--------------------------------------------------------------------------
@@ -247,8 +241,6 @@ class CoincheckApi:
         return r
 
 
-
-
     ###############################################
     #coincheckのtickerを取得する関数(publicApiを使用)
     ###############################################
@@ -272,9 +264,6 @@ class CoincheckApi:
         r = c.json()
 
         return r
-
-
-
 
     ##########################
     #残高からjpyを取得する
@@ -300,27 +289,7 @@ class CoincheckApi:
         return nonce
 
 
-
-
 if __name__ == "__main__":
 
-    print("Test start/")
-
     api = CoincheckApi()
-
     print(api.getBoard())
-
-    #result = api.getBalance()
-    #print(result)
-    #print(api.getBalanceJpy(result))
-    #print(api.getBalanceBtc(result))
-
-    #api.marketAsk(0.5,5000000)
-    #result = api.getBalance()
-    #print(api.getBalanceJpygetBalanceJpy(result))
-    #print(api.getBalanceBtc(result))
-
-    #api.marketBid(1.2,6000000)
-    #result = api.getBalance()
-    #print(api.getBalanceJpy(result))
-    #print(api.getBalanceBtc(result))

@@ -20,7 +20,6 @@ from zaifapi.api_error import ZaifApiError, ZaifApiNonceError
 from api.zaif_api import ZaifApi
 from api.coincheck_api import CoincheckApi
 
-#from .api.coincheck_api import CoincheckApi
 from common import spreadlog,slack
 from common.logger import Logger
 from common.status_monitor import StatusMonitor
@@ -32,7 +31,6 @@ log = Logger(__name__)
 class ZaifCoincheckTrade:
 
     def __init__(self):
-
 
         self.conf = configparser.ConfigParser() 
         self.conf.read_file(codecs.open(CONFIG_FILE,"r","utf8"))
@@ -314,7 +312,6 @@ class ZaifCoincheckTrade:
 
         return {'trade_type':trade_type,'price_diff':price_diff}
 
-
     def debugWriteBalance(self,balance):
 
         debug_balance_file = self.conf.get('debug','DEBUG_BALANCE_FILE')
@@ -322,7 +319,6 @@ class ZaifCoincheckTrade:
         #TESTモードでファイルへ書き込み
         with open(debug_balance_file,"w") as w:
             json.dump(balance,w)
-
 
     #Zaifで買ってCoincheckで売る。
     def TradeBuyZaifSellCoincheck(self,btc_lot,zaif_ask,coin_bid):
@@ -426,10 +422,12 @@ class ZaifCoincheckTrade:
             try:
                 #zaifはapiで３回リトライしているので回す必要はない。
                 result = self.zaif_api.trade_zaif_bid(btc_lot,zaif_bid)
+
             except ZaifApiError:
                 log.critical('Zaifのトレードが失敗したので残高を確認して下さい。')
                 log.critical(traceback.format_exc())
                 return
+
             else:
                 log.critical("Zaif 最終トレード時刻:" + datetime.datetime.now().isoformat())
                 log.critical("Zaif 最終トレード価格:" + str(zaif_bid))
@@ -445,6 +443,7 @@ class ZaifCoincheckTrade:
 
         else:
             balance_before = self.getBalance()
+
             #Coincheckで買った価格と数量を出力する。
             coin_jpy = int(balance_before['coin_jpy']) - (btc_lot * coin_ask)
             coin_btc = float(balance_before['coin_btc']) + btc_lot
@@ -566,6 +565,7 @@ class ZaifCoincheckTrade:
 
         #連続でスプレッドが開いていた場合           
         if self.coin_spread_over_count >= self.price_over_count:
+
             #Coincheckで買って、Zaifで売る。
             self.TradeBuyCoincheckSellZaif( self.btc_lot,
                                             board['coin_tradable_ask_price'],
@@ -769,10 +769,7 @@ class ZaifCoincheckTrade:
                     log.critical("アンバランスが解消されないので再調整します。。")
 
                 time.sleep(1)
-
         return 
-
-
 
     #メイン処理
     def mainProcess(self):
@@ -820,7 +817,6 @@ class ZaifCoincheckTrade:
 
                 #zaifでの買いにウェイトを置きたい。
                 if self.broker_weight == 'zaif':
-
                     ztoc_btc_limit = self.minimum_btc_limit
                     ztoc_yen_limit = self.minimum_yen_limit               
                     ctoz_btc_limit = yen_limit
@@ -875,6 +871,7 @@ class ZaifCoincheckTrade:
             else:
                 log.critical("##### Action Mode:REVERSE")
 
+                #Buy Coincheck Sell Zaif
                 if self.balance['zaif_btc'] >  self.balance['coin_btc']:
                     log.critical("BUY:Coincheck SELL:Zaif")
                     log.critical("BTC      Zaif => Coincheck")
@@ -882,6 +879,7 @@ class ZaifCoincheckTrade:
                     self.reverseToCoincheck(board,board_info)
                     reverse_side = "BTC >> Coincheck  JPY >> Zaif"
 
+                #Buy Zaif Sell Coincheck
                 elif self.balance['coin_btc'] > self.balance['zaif_btc']:
                     log.critical("BUY:Zaif SELL:Coincheck")
                     log.critical("BTC Coincheck => Zaif")
@@ -948,7 +946,6 @@ class ZaifCoincheckTrade:
             log.critical("CA-ZB:" + str(board['zaif_tradable_bid_price'] - board['coin_tradable_ask_price'] ))
             log.critical("     Zaif Bid-Lot:" + str(board['zaif_tradable_bid_lot_total']))
             log.critical("Coincheck Ask-Lot:" + str(board['coin_tradable_ask_lot_total']))
-
 
             bid = 0
             if board['zaif_bid'][0] < board['coin_bid'][0]:

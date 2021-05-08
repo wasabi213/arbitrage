@@ -36,7 +36,6 @@ class CoincheckApi:
         self.API_SECRET_KEY = self.conf.get("api_keys","coin_secret_key")
         self.LOG_PATH = self.conf.get("system","trade_log_path")  #ログパスの取得
 
-    ##coincheck関係
     #######################################
     #coincheckのPrivateAPIリクエスト送信関数
     #######################################
@@ -86,8 +85,6 @@ class CoincheckApi:
             log.tradelog(r)
 
         return r
-
-
 
     ###############################################
     #残高の取得
@@ -163,6 +160,7 @@ class CoincheckApi:
             log.tradelog(r)
 
         return r
+
     ##############################
     #coincheckでbtcを指値で買う関数
     ##############################
@@ -178,7 +176,6 @@ class CoincheckApi:
         r = c.json()
 
         return r
-
 
     #############################
     #coincheckの板情報を取得する。
@@ -215,15 +212,5 @@ class CoincheckApi:
 
 if __name__ == "__main__":
 
-    print("Test start/")
-
     api = CoincheckApi()
-
     print(api.coin_get_balance())
-    #print(api.coin_get_ticker())
-    #print(api.trade_coin_bid(0))
-    #print(api.trade_coin_ask(0,0))
-    #print(api.trade_coin_ask_limit_price(0,0))
-    #print(api.coincheck_get_board())
-    #print(api.coin_get_transactions())
-    #print(api.buildNonce())

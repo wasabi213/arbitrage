@@ -20,5 +20,4 @@ def log_output(output_path,msg):
     f.write(msg)
     f.close()
 
-#def createLog():
 

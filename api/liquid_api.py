@@ -68,7 +68,6 @@ class LiquidApi:
         else:
             return self.debugMakertAsk(lot,ask)
 
-
     #######################################
     #Liquid 成行売り注文
     #######################################
@@ -79,7 +78,6 @@ class LiquidApi:
         else:
             return self.debugMarketBid(lot,bid)
 
-
     #############################
     #板情報を取得する。
     #############################
@@ -87,10 +85,6 @@ class LiquidApi:
     def getBoard(self,id=5):
         url = 'https://api.liquid.com/products/' + str(id) + '/price_levels'
         result = requests.get(url).json()
-
-        #asks = result['buy_price_levels']
-        #bids = result['sell_price_levels'] 
-
         board = {"asks":result['buy_price_levels'],"bids":result['sell_price_levels'] }
 
         return board
@@ -112,7 +106,6 @@ class LiquidApi:
             if row['currency'] == 'BTC':
                 return float(row['balance'])
         return 0
-
 
     def debugGetBalance(self):
 
@@ -157,8 +150,7 @@ class LiquidApi:
 
         log.info("Liquidの残高ログをBidで更新しました。")
 
-
-    #--------------------------------------------------------------------------
+    #------------------------------------------------------------------------
     #API固有のメソッド
     #--------------------------------------------------------------------------
     #############################################
@@ -219,7 +211,6 @@ class LiquidApi:
         datas = json.loads(res.text)
         return datas
 
-
     #######################################
     #Liquid 成行注文
     #######################################
@@ -244,7 +235,6 @@ class LiquidApi:
 
         return result
 
-
     ###############################################
     #取引履歴の取得
     ###############################################
@@ -258,7 +248,6 @@ class LiquidApi:
         log.tradelog(transaction)
 
         return transaction
-
 
 
     @staticmethod
@@ -279,24 +268,5 @@ class LiquidApi:
 
 if __name__ == "__main__":
 
-    print("Test start/")
-
     api = LiquidApi()
-
     print(api.getBoard())
-
-
-    #result = api.getBalance()
-    #print(result)
-    #print(api.getBalanceJpy(result))
-    #print(api.getBalanceBtc(result))
-
-    #api.marketAsk(0.5,5000000)
-    #result = api.getBalance()
-    #print(api.getBalanceJpy(result))
-    #print(api.getBalanceBtc(result))
-
-    #api.marketBid(1.2,6000000)
-    #result = api.getBalance()
-    #print(api.getBalanceJpy(result))
-    #print(api.getBalanceBtc(result))

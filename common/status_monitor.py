@@ -20,9 +20,7 @@ class StatusMonitor:
             path.touch()
 
     def setInfo(self,info):
-        #jsonobj = info.load()
         f = open(self.monitor_path,'w')
-        #f.write(jsonobj)
         json.dump(info,f)
         f.close()
 

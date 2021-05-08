@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-#import logging
 import logging.handlers
 from logging import Formatter, StreamHandler, FileHandler, getLogger, DEBUG,INFO,WARN,CRITICAL,ERROR
 
@@ -20,8 +19,6 @@ class Logger:
 
 		self.logger = getLogger(name)
 		self.logger.setLevel(self.system_log_level)
-		#self.logger.findCaller(True)
-
 
 		# file
 		if inifile.getboolean('system','logging') == True:
@@ -31,7 +28,6 @@ class Logger:
 
 			handler = logging.handlers.TimedRotatingFileHandler(filename=self.system_log_path,when='D',backupCount=10)
 			handler.setLevel(self.system_log_level)
-			#file_formatter = Formatter("[%(asctime)s] [%(process)d] [%(name)s] [%(levelname)s] %(message)s")
 			file_formatter = Formatter("[%(asctime)s] %(message)s")
 			handler.setFormatter(file_formatter)
 			self.file_logger.addHandler(handler)
@@ -43,7 +39,6 @@ class Logger:
 			self.logger.setLevel(self.system_log_level)
 			self.logger.findCaller(True)
 
-			#console_handler = StreamHandler(sys.stderr)
 			console_handler = StreamHandler(sys.stdout)
 			console_handler.setLevel(self.system_log_level)
 			formatter = Formatter("[%(asctime)s] %(message)s")
@@ -57,7 +52,6 @@ class Logger:
 			self.trade_logger = getLogger(name + '_trade_log')
 			self.trade_logger.setLevel(self.system_log_level)
 
-			#trade_handler = logging.handlers.FileHandler(filename=self.trade_log_path)
 			trade_handler = logging.FileHandler(filename=self.trade_log_path)
 			trade_handler.setLevel(self.system_log_level)
 			trade_file_formatter = Formatter("%(asctime)s %(message)s")
@@ -66,7 +60,6 @@ class Logger:
 
 	def debug(self, msg):
 		self.logger.debug(self.getCallerInfo() + str(msg))
-		#print(msg)
 
 	def info(self, msg):
 		if self.logger.level == DEBUG:
@@ -75,7 +68,6 @@ class Logger:
 			debug_info = msg
 
 		self.logger.info(debug_info)
-		#print(msg)
 
 	def warn(self, msg):
 		if self.logger.level == DEBUG:
@@ -84,7 +76,6 @@ class Logger:
 			debug_info = msg
 
 		self.logger.warning(debug_info)
-		#print(msg)
 
 	def error(self, msg):
 		if self.logger.level == DEBUG:
@@ -93,7 +84,6 @@ class Logger:
 			debug_info = msg
 
 		self.logger.error(debug_info)
-		#print(msg)
 
 	def critical(self, msg):
 		if self.logger.level == DEBUG:
@@ -102,7 +92,6 @@ class Logger:
 			debug_info = msg
 
 		self.logger.critical(debug_info)
-		#print(msg)
 
 	def getCallerInfo(self):
 		func = inspect.stack()[2].function
@@ -112,6 +101,3 @@ class Logger:
 
 	def tradelog(self,msg1):
 		self.trade_logger.critical(str(msg1))
-
-
-

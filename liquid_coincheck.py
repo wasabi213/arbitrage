@@ -134,7 +134,6 @@ class BrokerArbiTrage:
 
         self.balance = balance
 
-
     def getBalance(self):
         return self.balance
 

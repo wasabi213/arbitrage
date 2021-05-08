@@ -91,7 +91,6 @@ class ZaifApi:
 
         return result
 
-
     ##########################
     #残高からjpyを取得する
     ##########################
@@ -106,14 +105,5 @@ class ZaifApi:
 
 if __name__ == "__main__":
 
-    print("Test start/")
-
     api = ZaifApi()
-
-    #api.trade_zaif_bid(0,0)
-
-    #print(api.zaif_get_info2())
-    #print(api.zaif_get_board())
-
-
     api.zaif_trade_history()

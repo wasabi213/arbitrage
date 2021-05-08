@@ -97,7 +97,6 @@ class DebugArbiTrage:
         with open(debug_balance_file,"w") as w:
             json.dump(balance,w)
 
-
     #Zaifで買ってCoincheckで売る。
     #def debugTradeBuyPrimaySellSecondary(self,btc_lot,primary_ask,secondary_bid):
     def debugPrimaryBuySecondarySell(self,btc_lot,primary_ask,secondary_bid):
@@ -106,12 +105,12 @@ class DebugArbiTrage:
         log.critical("#######################################")
 
         #残高バランスが崩れているときに通知する。
-        #自動的に修正できるとよい
-
         balance_before = self.getBalance()
+
         #primaryで買った価格と数量を出力する。
         primary_jpy = float(balance_before['primary_jpy']) - (btc_lot * primary_ask)
         primary_btc = float(balance_before['primary_btc']) + btc_lot
+
         #secondaryで売った価格と数量を出力する。
         secondary_jpy = float(balance_before['secondary_jpy']) + (btc_lot * secondary_bid)
         secondary_btc = float(balance_before['secondary_btc']) - btc_lot
