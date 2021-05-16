@@ -1,26 +1,20 @@
-#import logger
-#import Logger
+from common.logger import Logger
 import datetime
 import hashlib
 import hmac
 import requests
 import json
-import time
 import sys
-import os
-import csv
 import configparser
 import codecs
-import ccxt
 from retry import retry
 
 import pathlib
 current_dir = pathlib.Path(__file__).resolve().parent
-sys.path.append( str(current_dir) + '/../' )
-from common.logger import Logger
+sys.path.append(str(current_dir) + '/../')
 
 CONFIG_FILE = '../config/zaif_coincheck_config.ini'
-log = Logger(__name__)
+LOG = Logger(__name__)
 
 
 class CoincheckApi:
@@ -28,24 +22,25 @@ class CoincheckApi:
     def __init__(self):
 
         self.conf = configparser.ConfigParser()
-        self.conf.read_file(codecs.open(CONFIG_FILE,"r","utf8"))
+        self.conf.read_file(codecs.open(CONFIG_FILE, "r", "utf8"))
 
-        #APIキーの取得
-        self.MODE = self.conf.get('env','mode')
-        self.API_KEY = self.conf.get("api_keys","coin_access_key")
-        self.API_SECRET_KEY = self.conf.get("api_keys","coin_secret_key")
-        self.LOG_PATH = self.conf.get("system","trade_log_path")  #ログパスの取得
+        # APIキーの取得
+        self.MODE = self.conf.get('env', 'mode')
+        self.API_KEY = self.conf.get("api_keys", "coin_access_key")
+        self.API_SECRET_KEY = self.conf.get("api_keys", "coin_secret_key")
+        self.LOG_PATH = self.conf.get("system", "trade_log_path")  # ログパスの取得
 
     #######################################
-    #coincheckのPrivateAPIリクエスト送信関数
+    # coincheckのPrivateAPIリクエスト送信関数
     #######################################
-    def ccPrivateApi(self,i_path, i_nonce, i_params=None, i_method="get"):
+    def ccPrivateApi(self, i_path, i_nonce, i_params=None, i_method="get"):
         API_URL = "https://coincheck.com"
-        headers = {   'ACCESS-KEY':self.API_KEY, 
-                    'ACCESS-NONCE':str(i_nonce), 
-                    'Content-Type': 'application/json'}
+        headers = {'ACCESS-KEY': self.API_KEY,
+                   'ACCESS-NONCE': str(i_nonce),
+                   'Content-Type': 'application/json'}
 
-        s = hmac.new(bytearray(self.API_SECRET_KEY.encode('utf-8')), digestmod=hashlib.sha256)
+        s = hmac.new(bytearray(self.API_SECRET_KEY.encode(
+            'utf-8')), digestmod=hashlib.sha256)
 
         if i_params is None:
             w = str(i_nonce) + API_URL + i_path
@@ -56,7 +51,7 @@ class CoincheckApi:
                 return requests.delete(API_URL+i_path, headers=headers)
             else:
                 return requests.get(API_URL+i_path, headers=headers)
-        else:    
+        else:
             body = json.dumps(i_params)
             w = str(i_nonce) + API_URL + i_path + body
             s.update(w.encode('utf-8'))
@@ -64,139 +59,141 @@ class CoincheckApi:
 
         return requests.post(API_URL+i_path, data=body, headers=headers)
 
-
     ###############################################
-    #取引履歴の取得
+    # 取引履歴の取得
     ###############################################
-    @retry(exceptions=(Exception),tries=3,delay=5)
+    @retry(exceptions=(Exception), tries=3, delay=5)
     def coin_get_transactions(self):
-        #nonce = int((datetime.datetime.today() - datetime.datetime(2021,2,11)).total_seconds()) * 100
+        # nonce = int((datetime.datetime.today() - datetime.datetime(2021,2,11)).total_seconds()) * 100
         nonce = self.buildNonce()
 
-        c = self.ccPrivateApi("/api/exchange/orders/transactions",nonce)
+        c = self.ccPrivateApi("/api/exchange/orders/transactions", nonce)
         r = c.json()
 
         if r['success'] != True:
             error_message = r['error']
-            msg = str(datetime.datetime.now()) + ',ccerror,'+ str(error_message) + '\n'
-            log.error(msg)
+            msg = str(datetime.datetime.now()) + \
+                ',ccerror,' + str(error_message) + '\n'
+            LOG.error(msg)
         else:
-            #brker 
-            log.tradelog(r)
+            # broker
+            LOG.tradelog(r)
 
         return r
 
     ###############################################
-    #残高の取得
+    # 残高の取得
     ###############################################
-    @retry(exceptions=(Exception),tries=5,delay=15)
+    @retry(exceptions=(Exception), tries=5, delay=15)
     def coin_get_balance(self):
-        #order_type : market_sell : 成行注文　現物取引　売り
-        #nonce = int((datetime.datetime.today() - datetime.datetime(2021,2,11)).total_seconds()) * 100
+        # order_type : market_sell : 成行注文　現物取引　売り
+        # nonce = int((datetime.datetime.today() - datetime.datetime(2021,2,11)).total_seconds()) * 100
         nonce = self.buildNonce()
-        c = self.ccPrivateApi("/api/accounts/balance",nonce)
+        c = self.ccPrivateApi("/api/accounts/balance", nonce)
         r = c.json()
 
-        if r['success'] != True:
+        if r['success'] is not True:
             error_message = r['error']
-            msg = str(datetime.datetime.now()) + ',ccerror,'+ str(error_message) + '\n'
-            log.error(msg)
+            msg = str(datetime.datetime.now()) + \
+                ',ccerror,' + str(error_message) + '\n'
+            LOG.error(msg)
 
         return r
 
     ###############################################
-    #coincheckのtickerを取得する関数(publicApiを使用)
+    # coincheckのtickerを取得する関数(publicApiを使用)
     ###############################################
-    @retry(exceptions=(Exception),tries=3,delay=5)
+    @retry(exceptions=(Exception), tries=3, delay=5)
     def coin_get_ticker(self):
         url = 'https://coincheck.jp/api/ticker'
         return requests.get(url).text
 
     ###################################
-    #coincheckでbtc分のBitcoinを売る関数
+    # coincheckでbtc分のBitcoinを売る関数
     ###################################
-    def trade_coin_bid(self,btc):
-        #order_type : market_sell : 成行注文　現物取引　売り
+    def trade_coin_bid(self, btc):
+        # order_type : market_sell : 成行注文　現物取引　売り
         #nonce = int((datetime.datetime.today() - datetime.datetime(2021,2,11)).total_seconds()) * 100
         nonce = self.buildNonce()
 
-        c = self.ccPrivateApi("/api/exchange/orders",nonce,
-                            {"pair":"btc_jpy",
-                            "order_type":"market_sell",
-                            "amount":btc})
+        c = self.ccPrivateApi("/api/exchange/orders", nonce,
+                              {"pair": "btc_jpy",
+                               "order_type": "market_sell",
+                               "amount": btc})
         r = c.json()
 
         if r['success'] != True:
             error_message = r['error']
-            msg = str(datetime.datetime.now()) + ',ccerror,'+ str(error_message) + '\n'
-            log.error(msg)
+            msg = str(datetime.datetime.now()) + \
+                ',ccerror,' + str(error_message) + '\n'
+            LOG.error(msg)
         else:
-            log.tradelog(r)
+            LOG.tradelog(r)
 
         return r
 
     ###################################
-    #coincheckでbtc分のBitcoinを買う関数
+    # coincheckでbtc分のBitcoinを買う関数
     ###################################
-    def trade_coin_ask(self,btc,coin_ask):
-        #btc分だけのBitcoinをcoincheckで買います。
-        #order_type : market_buy : 成行注文　現物取引　買い
-        #買いの成行注文をする場合は、market_buy_amountを指定する必要がある。(JPY)
-        #market_buy_amountは日本円で渡す必要があるため、 int(btc * coin_ask)としている。
-        #nonce = int((datetime.datetime.today() - datetime.datetime(2021,2,11)).total_seconds()) * 100
+    def trade_coin_ask(self, btc, coin_ask):
+        # btc分だけのBitcoinをcoincheckで買います。
+        # order_type : market_buy : 成行注文　現物取引　買い
+        # 買いの成行注文をする場合は、market_buy_amountを指定する必要がある。(JPY)
+        # market_buy_amountは日本円で渡す必要があるため、 int(btc * coin_ask)としている。
+        # nonce = int((datetime.datetime.today() - datetime.datetime(2021,2,11)).total_seconds()) * 100
         nonce = self.buildNonce()
 
-        c = self.ccPrivateApi("/api/exchange/orders",nonce,
-                            {"pair":"btc_jpy",
-                            "order_type":"market_buy",
-                            "market_buy_amount":int(btc*coin_ask)})
+        c = self.ccPrivateApi("/api/exchange/orders", nonce,
+                              {"pair": "btc_jpy",
+                               "order_type": "market_buy",
+                               "market_buy_amount": int(btc*coin_ask)})
         r = c.json()
 
         if r['success'] != True:
             error_message = r['error']
-            msg = str(datetime.datetime.now()) + ',ccerror,'+ str(error_message) + '\n'
-            log.error(msg)
+            msg = str(datetime.datetime.now()) + \
+                ',ccerror,' + str(error_message) + '\n'
+            LOG.error(msg)
         else:
-            log.tradelog(r)
+            LOG.tradelog(r)
 
         return r
 
     ##############################
-    #coincheckでbtcを指値で買う関数
+    # coincheckでbtcを指値で買う関数
     ##############################
-    def trade_coin_ask_limit_price(self,btc,coin_ask):
+    def trade_coin_ask_limit_price(self, btc, coin_ask):
         #nonce = int((datetime.datetime.today() - datetime.datetime(2017,1,1)).total_seconds()) * 100
         nonce = self.buildNonce()
 
-        c = self.ccPrivateApi("/api/exchange/orders",nonce,
-                            {"pair":"btc_jpy",
-                            "order_type":"buy",
-                            "rate":int(coin_ask*1.1),
-                            "amount":btc})
+        c = self.ccPrivateApi("/api/exchange/orders", nonce,
+                              {"pair": "btc_jpy",
+                               "order_type": "buy",
+                               "rate": int(coin_ask*1.1),
+                               "amount": btc})
         r = c.json()
 
         return r
 
     #############################
-    #coincheckの板情報を取得する。
+    # coincheckの板情報を取得する。
     #############################
-    @retry(exceptions=(Exception),tries=3,delay=5)
+    @retry(exceptions=(Exception), tries=3, delay=5)
     def coincheck_get_board(self):
         url = 'https://coincheck.jp/api/order_books'
         result = requests.get(url).json()
         return result
 
-
     ##########################
-    #残高からjpyを取得する
+    # 残高からjpyを取得する
     ##########################
-    def coin_get_balance_jpy(self,result):
+    def coin_get_balance_jpy(self, result):
         return result['jpy']
 
     ##########################
-    #残高からbtcを取得する
+    # 残高からbtcを取得する
     ##########################
-    def coin_get_balance_btc(self,result):
+    def coin_get_balance_btc(self, result):
         return result['btc']
 
     ##########################
@@ -206,7 +203,7 @@ class CoincheckApi:
         now = datetime.datetime.now()
         now_ts = now.timestamp()
         nonce = int(now_ts * 1000000)
-        log.debug(nonce)
+        LOG.debug(nonce)
         return nonce
 
 
