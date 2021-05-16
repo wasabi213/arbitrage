@@ -21,3 +21,5 @@
 タイミングで初期状態（ビットコイン、現金半々くらい）になるまで取引を繰り返す。
 以上の処理を繰り返すことにより利益を積み重ねていく。
 
+
+![arbitrage](https://user-images.githubusercontent.com/8347332/118396058-9fef4e00-b688-11eb-8e9c-ce0abf9afc62.png)
