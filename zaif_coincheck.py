@@ -53,7 +53,7 @@ class ZaifCoincheckTrade:
         self.yen_start_amount = self.conf.getfloat('trade', 'yen_start_amount')
 
         # スプレッドモードで動作しているか、リバースモードで動作しているか。
-        self.action_mode = ''
+        self.action_mode = ""
 
         # エントリするときのスプレッド
         self.entry_spread = self.conf.getint('trade', 'entry_spread')
@@ -81,7 +81,7 @@ class ZaifCoincheckTrade:
         self.broker_weight = self.conf.get('trade', 'broker_weight')
 
         # どちらのブローカーにBTCを戻すか。
-        self.reverse_broker = ''
+        self.reverse_broker = ""
 
         # 最新の残高状態
         self.balance = []
